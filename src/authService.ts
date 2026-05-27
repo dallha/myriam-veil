@@ -3,9 +3,21 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-// Load Supabase credentials from environment variables (Vite prefix VITE_)
-const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL as string) || "";
-const SUPABASE_ANON_KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY as string) || "";
+// Sanitization helper functions to prevent quotes or formatting issues when pasting env keys in Vercel/Netlify
+const sanitizeUrl = (url: string) => {
+  if (!url) return "";
+  let cleaned = url.replace(/^['"]|['"]$/g, "").trim();
+  return cleaned.replace(/\/+$/, ""); // Strip trailing slashes
+};
+
+const sanitizeKey = (key: string) => {
+  if (!key) return "";
+  return key.replace(/^['"]|['"]$/g, "").trim();
+};
+
+const SUPABASE_URL = sanitizeUrl((import.meta.env.VITE_SUPABASE_URL as string) || "");
+const SUPABASE_ANON_KEY = sanitizeKey((import.meta.env.VITE_SUPABASE_ANON_KEY as string) || "");
+
 
 // Configurable local fallback email & password for immediate local testing
 export const LOCAL_ADMIN_EMAIL = "directeur@myriamveil.sn";
