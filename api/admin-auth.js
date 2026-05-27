@@ -65,33 +65,32 @@ export default async function handler(req, res) {
   const data = await supabaseResponse.json().catch(() => ({}));
 
   if (!supabaseResponse.ok) {
-    const msg =
-      data.error_description || data.error || data.msg || "";
+    const errorCode = data.error_code || data.error || "unknown";
+    const msg = data.error_description || data.msg || data.error || "";
 
-    if (
-      supabaseResponse.status === 400 &&
-      msg.toLowerCase().includes("invalid")
-    ) {
-      return res
-        .status(401)
-        .json({ error: "Adresse email ou mot de passe incorrect." });
-    }
-
-    if (
-      supabaseResponse.status === 400 &&
-      msg.toLowerCase().includes("email not confirmed")
-    ) {
+    // Email non confirmé
+    if (errorCode === "email_not_confirmed" || msg.toLowerCase().includes("email not confirmed")) {
       return res.status(403).json({
         error:
           "Votre email n'a pas encore été confirmé. " +
-          "Vérifiez votre boîte de réception et cliquez sur le lien de confirmation.",
+          "Allez dans Supabase → Authentication → Users, trouvez votre email et cliquez sur \"Confirm email\". " +
+          "Ou confirmez-le via SQL : UPDATE auth.users SET email_confirmed_at = NOW() WHERE email = '" + (email + "';"),
+        supabase_error_code: errorCode,
       });
     }
 
+    // Mauvais identifiants
+    if (errorCode === "invalid_credentials" || msg.toLowerCase().includes("invalid")) {
+      return res.status(401).json({
+        error: "Adresse email ou mot de passe incorrect.",
+        supabase_error_code: errorCode,
+      });
+    }
+
+    // Autre erreur Supabase — renvoie le message brut pour diagnostic
     return res.status(supabaseResponse.status).json({
-      error:
-        msg ||
-        `Erreur d'authentification (code ${supabaseResponse.status}).`,
+      error: msg || `Erreur Supabase (code: ${errorCode}, statut: ${supabaseResponse.status}).`,
+      supabase_error_code: errorCode,
     });
   }
 
