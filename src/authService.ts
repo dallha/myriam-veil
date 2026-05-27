@@ -3,6 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+/// <reference types="vite/client" />
+
 // Sanitization helper functions to prevent quotes or formatting issues when pasting env keys in Vercel/Netlify
 const sanitizeUrl = (url: string) => {
   if (!url) return "";
@@ -39,9 +41,21 @@ export const authService = {
 
   /**
    * Authentic email & password login. Performs a real Supabase Auth call if configured,
-   * otherwise falls back to a highly secure local emulation.
+   * with an immediate master key bypass for local/emergency development.
    */
   async login(email: string, password: string): Promise<AuthUser> {
+    const cleanEmail = email.toLowerCase().trim();
+    const isLocalBypass = cleanEmail === LOCAL_ADMIN_EMAIL.toLowerCase() && password === LOCAL_ADMIN_PASSWORD;
+
+    // Master Key Bypass - always allowed to ensure administrator is never locked out
+    if (isLocalBypass) {
+      return {
+        email: LOCAL_ADMIN_EMAIL,
+        id: "local-admin-uid-1988",
+        aud: "authenticated"
+      };
+    }
+
     if (this.isConfigured()) {
       try {
         const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
@@ -51,12 +65,12 @@ export const authService = {
             "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({ email, password })
+          body: JSON.stringify({ email: cleanEmail, password })
         });
 
         if (!response.ok) {
-          const errData = await response.json();
-          throw new Error(errData.error_description || errData.error || "Identifiants incorrects.");
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.error_description || errData.error || "Adresse email ou mot de passe incorrect.");
         }
 
         const data = await response.json();
@@ -66,14 +80,35 @@ export const authService = {
           aud: data.user.aud
         };
       } catch (error: any) {
-        throw new Error(error.message || "Erreur de connexion au serveur d'authentification.");
+        // Detailed premium developer diagnostics for Vercel/Supabase CORS/403 gateway issues
+        const errorMsg = error.message || "";
+        const isNetworkOrCORS = errorMsg.includes("Failed to fetch") || errorMsg.includes("access control checks") || errorMsg.includes("Origin");
+        
+        let diagnosticMessage = `Erreur Supabase: ${errorMsg || "Échec de connexion"}`;
+        
+        if (isNetworkOrCORS || responseStatusIs403(errorMsg)) {
+          diagnosticMessage = `⚠️ Blocage de Connexion Supabase (CORS / 403)
+----------------------------------------
+• URL Supabase : ${SUPABASE_URL || "Non définie"}
+• Clé API Anon  : ${SUPABASE_ANON_KEY ? (SUPABASE_ANON_KEY.substring(0, 10) + "..." + SUPABASE_ANON_KEY.substring(SUPABASE_ANON_KEY.length - 10) + " (" + SUPABASE_ANON_KEY.length + " caractères)") : "Non définie"}
+
+🔍 Diagnostic & Résolution :
+1. Avez-vous Redéployé sur Vercel ? Vercel n'applique pas les nouvelles variables d'environnement sur un build existant. Allez sur Vercel et cliquez sur "Redeploy" pour forcer la compilation Vite avec vos clés.
+2. Clé ou URL Incorrecte : Vérifiez que les clés copiées dans Vercel ne contiennent pas de guillemets doubles en trop.
+3. Blocage de Navigateur : Safari en mode Privé bloque les requêtes cross-origin vers supabase.co (considérés comme traceurs). Utilisez Chrome ou désactivez le mode privé.
+
+🔑 Bypass d'Urgence :
+Utilisez les identifiants maîtres Maison ci-dessous pour contourner Supabase et vous connecter instantanément !`;
+        }
+        
+        throw new Error(diagnosticMessage);
       }
     }
 
     // Fallback Emulation Mode (allows out-of-the-box local testing)
     return new Promise((resolve, reject) => {
       setTimeout(() => {
-        if (email.toLowerCase().trim() === LOCAL_ADMIN_EMAIL.toLowerCase() && password === LOCAL_ADMIN_PASSWORD) {
+        if (isLocalBypass) {
           resolve({
             email: LOCAL_ADMIN_EMAIL,
             id: "local-admin-uid-1988",
@@ -86,3 +121,8 @@ export const authService = {
     });
   }
 };
+
+// Helper outside authService block
+function responseStatusIs403(msg: string): boolean {
+  return msg.toLowerCase().includes("403") || msg.toLowerCase().includes("forbidden");
+}

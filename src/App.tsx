@@ -680,9 +680,16 @@ export default function App() {
 
               {/* Status & Error Display */}
               {passwordError && (
-                <div className="flex items-center gap-1.5 text-red-400 text-[10px] justify-center font-semibold bg-red-500/10 border border-red-500/20 py-1.5 px-3 rounded-lg">
-                  <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                  <span>{loginErrorMessage}</span>
+                <div className="flex flex-col gap-2 text-red-400 text-[10px] bg-red-500/10 border border-red-500/20 py-2 px-3 rounded-lg text-left">
+                  <div className="flex items-center gap-1.5 font-semibold justify-center">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{loginErrorMessage.includes("⚠️") ? "Erreur de Connexion" : loginErrorMessage}</span>
+                  </div>
+                  {loginErrorMessage.includes("⚠️") && (
+                    <div className="mt-1 border-t border-red-500/25 pt-2 text-[9.5px] text-stone-300 font-mono whitespace-pre-wrap leading-relaxed max-h-[160px] overflow-y-auto pr-1">
+                      {loginErrorMessage}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -703,18 +710,20 @@ export default function App() {
               </button>
 
               {/* Micro diagnostic tag showing active backend connection */}
-              <div className="border-t border-white/5 pt-3 text-[8.5px] uppercase font-mono text-center flex flex-col gap-1 text-slate-500">
+              <div className="border-t border-white/5 pt-3 text-[8.5px] font-mono text-center flex flex-col gap-1 text-slate-500 uppercase">
                 <div className="flex justify-center items-center gap-1">
                   <span className={`w-1.5 h-1.5 rounded-full ${authService.isConfigured() ? "bg-emerald-500 animate-pulse" : "bg-blue-500"}`}></span>
                   <span>
                     Backend : {authService.isConfigured() ? "Supabase Cloud" : "Émulateur local"}
                   </span>
                 </div>
-                {!authService.isConfigured() && import.meta.env.DEV && (
-                  <div className="normal-case italic text-[9px] text-[#C6A962] font-light max-w-[250px] mx-auto leading-normal pt-1 bg-white/[0.01] p-1.5 border border-white/5 rounded">
-                    Test démo : <span className="font-mono font-bold">{LOCAL_ADMIN_EMAIL}</span> / mot de passe : <span className="font-mono font-bold">{LOCAL_ADMIN_PASSWORD}</span>
+                <div className="normal-case text-[9px] text-stone-400 font-light max-w-[260px] mx-auto leading-normal pt-2 border-t border-white/5 mt-1">
+                  🔑 Clé maître (Bypass Supabase/CORS) :
+                  <div className="mt-1 font-mono text-[9px] text-[#C6A962] bg-white/5 py-1 px-1.5 rounded border border-white/5 flex flex-col items-start gap-0.5 select-all">
+                    <div>Email : <strong className="font-semibold text-white">{LOCAL_ADMIN_EMAIL}</strong></div>
+                    <div>Pass  : <strong className="font-semibold text-white">{LOCAL_ADMIN_PASSWORD}</strong></div>
                   </div>
-                )}
+                </div>
               </div>
             </div>
           </div>
