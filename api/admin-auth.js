@@ -8,7 +8,19 @@
  */
 
 export default async function handler(req, res) {
-  // Autoriser uniquement les requêtes POST
+  // GET : diagnostic — ouvrez /api/admin-auth dans un navigateur pour tester
+  if (req.method === "GET") {
+    const urlSet = !!(process.env.VITE_SUPABASE_URL || "").trim();
+    const keySet = !!(process.env.VITE_SUPABASE_ANON_KEY || "").trim();
+    return res.status(200).json({
+      status: "Fonction Vercel opérationnelle",
+      supabase_url_configured: urlSet,
+      supabase_key_configured: keySet,
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  // Autoriser uniquement les requêtes POST pour l'auth
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Méthode non autorisée." });
   }
