@@ -1,0 +1,167 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Jost:ital,wght@0,100..900;1,100..900&family=Fira+Code:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Jost", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Syne", sans-serif;
+  --font-serif: "EB Garamond", serif;
+  --font-mono: "Fira Code", "JetBrains Mono", monospace;
+}
+
+body {
+  background-color: #02040a;
+  color: #cbd5e1; /* slate-300 */
+}
+
+/* Glassmorphism for panels */
+.panel-glass {
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  will-change: transform, backdrop-filter;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+}
+
+.panel-glass-deep {
+  background: rgba(2, 4, 10, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  will-change: transform, backdrop-filter;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+}
+
+.panel-glass-glow {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(59, 130, 246, 0.2); /* blue glow border */
+  box-shadow: 0 0 25px rgba(59, 130, 246, 0.05);
+  will-change: transform, backdrop-filter;
+  transform: translate3d(0, 0, 0);
+  backface-visibility: hidden;
+}
+
+.btn-immersive-primary {
+  background: linear-gradient(135deg, #3b82f6 0%, #d946ef 100%); /* Blue to Fuchsia */
+  color: #ffffff;
+  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-immersive-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(59, 130, 246, 0.5), 0 0 15px rgba(217, 70, 239, 0.3);
+}
+
+.btn-immersive-secondary {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-immersive-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Custom Editorial Keyframe Animations */
+@keyframes zoomOut {
+  0% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; transform: translateY(12px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeInRight {
+  0% { opacity: 0; transform: translateX(100%); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+/* Utility Animations */
+.animate-slow-zoom {
+  animation: zoomOut 16s ease-out forwards;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-fade-in-right {
+  animation: fadeInRight 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-marquee {
+  animation: marquee 20s linear infinite;
+}
+
+/* Custom Scrollbar configurations */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Custom scrollbar for desktop/oversized panels */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(2, 4, 10, 0.5);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 99px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Staggered Masonry Layout for Fine Jewelry Catalogue */
+.masonry-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.masonry-col-1 {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  margin-top: 40px; /* offset stagger */
+}
+
+.masonry-col-2 {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Asymmetric corner shape for Fine Jewelry Catalog */
+.img-asymmetric {
+  border-top-left-radius: 24px;
+  border-bottom-right-radius: 24px;
+  border-top-right-radius: 4px;
+  border-bottom-left-radius: 4px;
+}
+
+.card-radius {
+  border-radius: 24px 0 24px 0;
+}
