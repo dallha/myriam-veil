@@ -5,25 +5,25 @@
 
 /// <reference types="vite/client" />
 
-// Sanitization helper functions to prevent quotes or formatting issues when pasting env keys in Vercel/Netlify
-const sanitizeUrl = (url: string) => {
+/**
+ * authService.ts — Authentification Supabase professionnelle
+ * Aucun mot de passe codé en dur. Aucun bypass. Aucun émulateur.
+ * Toute connexion passe exclusivement par Supabase Auth.
+ */
+
+// Nettoyage des clés au cas où elles auraient été copiées avec des guillemets dans Vercel
+const sanitizeUrl = (url: string): string => {
   if (!url) return "";
-  let cleaned = url.replace(/^['"]|['"]$/g, "").trim();
-  return cleaned.replace(/\/+$/, ""); // Strip trailing slashes
+  return url.replace(/^['"]+|['"]+$/g, "").trim().replace(/\/+$/, "");
 };
 
-const sanitizeKey = (key: string) => {
+const sanitizeKey = (key: string): string => {
   if (!key) return "";
-  return key.replace(/^['"]|['"]$/g, "").trim();
+  return key.replace(/^['"]+|['"]+$/g, "").trim();
 };
 
 const SUPABASE_URL = sanitizeUrl((import.meta.env.VITE_SUPABASE_URL as string) || "");
 const SUPABASE_ANON_KEY = sanitizeKey((import.meta.env.VITE_SUPABASE_ANON_KEY as string) || "");
-
-
-// Configurable local fallback email & password for immediate local testing
-export const LOCAL_ADMIN_EMAIL = "directeur@myriamveil.sn";
-export const LOCAL_ADMIN_PASSWORD = "MaisonVeil1988";
 
 export interface AuthUser {
   email: string;
@@ -33,96 +33,83 @@ export interface AuthUser {
 
 export const authService = {
   /**
-   * Check if Supabase keys are configured in environment variables.
+   * Vérifie que les clés Supabase sont bien configurées dans les variables d'environnement.
    */
   isConfigured(): boolean {
     return !!(SUPABASE_URL && SUPABASE_ANON_KEY);
   },
 
   /**
-   * Authentic email & password login. Performs a real Supabase Auth call if configured,
-   * with an immediate master key bypass for local/emergency development.
+   * Connexion par email + mot de passe via Supabase Auth.
+   * Aucun identifiant codé en dur. Aucun mode dégradé.
+   * Si Supabase n'est pas configuré, une erreur explicite est levée.
    */
   async login(email: string, password: string): Promise<AuthUser> {
+    if (!this.isConfigured()) {
+      throw new Error(
+        "Configuration manquante : les variables d'environnement VITE_SUPABASE_URL et VITE_SUPABASE_ANON_KEY " +
+        "ne sont pas définies. Veuillez les configurer dans votre tableau de bord Vercel et relancer un déploiement."
+      );
+    }
+
     const cleanEmail = email.toLowerCase().trim();
-    const isLocalBypass = cleanEmail === LOCAL_ADMIN_EMAIL.toLowerCase() && password === LOCAL_ADMIN_PASSWORD;
 
-    // Master Key Bypass - always allowed to ensure administrator is never locked out
-    if (isLocalBypass) {
-      return {
-        email: LOCAL_ADMIN_EMAIL,
-        id: "local-admin-uid-1988",
-        aud: "authenticated"
-      };
+    let response: Response;
+    try {
+      response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+        method: "POST",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email: cleanEmail, password }),
+      });
+    } catch (networkError: any) {
+      // Erreur réseau pure (DNS, CORS sans réponse du serveur, Safari mode privé…)
+      throw new Error(
+        "Impossible de joindre le serveur d'authentification. " +
+        "Vérifiez votre connexion internet et que l'URL Supabase est correcte. " +
+        "Note : Safari en mode navigation privée bloque les requêtes vers des services tiers — " +
+        "utilisez Chrome ou Firefox si besoin."
+      );
     }
 
-    if (this.isConfigured()) {
-      try {
-        const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-          method: "POST",
-          headers: {
-            "apikey": SUPABASE_ANON_KEY,
-            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ email: cleanEmail, password })
-        });
+    if (!response.ok) {
+      // Le serveur a répondu avec une erreur HTTP
+      const errData = await response.json().catch(() => ({})) as Record<string, string>;
+      const msg = errData.error_description || errData.error || errData.msg || "";
 
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({}));
-          throw new Error(errData.error_description || errData.error || "Adresse email ou mot de passe incorrect.");
-        }
-
-        const data = await response.json();
-        return {
-          email: data.user.email,
-          id: data.user.id,
-          aud: data.user.aud
-        };
-      } catch (error: any) {
-        // Detailed premium developer diagnostics for Vercel/Supabase CORS/403 gateway issues
-        const errorMsg = error.message || "";
-        const isNetworkOrCORS = errorMsg.includes("Failed to fetch") || errorMsg.includes("access control checks") || errorMsg.includes("Origin");
-        
-        let diagnosticMessage = `Erreur Supabase: ${errorMsg || "Échec de connexion"}`;
-        
-        if (isNetworkOrCORS || responseStatusIs403(errorMsg)) {
-          diagnosticMessage = `⚠️ Blocage de Connexion Supabase (CORS / 403)
-----------------------------------------
-• URL Supabase : ${SUPABASE_URL || "Non définie"}
-• Clé API Anon  : ${SUPABASE_ANON_KEY ? (SUPABASE_ANON_KEY.substring(0, 10) + "..." + SUPABASE_ANON_KEY.substring(SUPABASE_ANON_KEY.length - 10) + " (" + SUPABASE_ANON_KEY.length + " caractères)") : "Non définie"}
-
-🔍 Diagnostic & Résolution :
-1. Avez-vous Redéployé sur Vercel ? Vercel n'applique pas les nouvelles variables d'environnement sur un build existant. Allez sur Vercel et cliquez sur "Redeploy" pour forcer la compilation Vite avec vos clés.
-2. Clé ou URL Incorrecte : Vérifiez que les clés copiées dans Vercel ne contiennent pas de guillemets doubles en trop.
-3. Blocage de Navigateur : Safari en mode Privé bloque les requêtes cross-origin vers supabase.co (considérés comme traceurs). Utilisez Chrome ou désactivez le mode privé.
-
-🔑 Bypass d'Urgence :
-Utilisez les identifiants maîtres Maison ci-dessous pour contourner Supabase et vous connecter instantanément !`;
-        }
-        
-        throw new Error(diagnosticMessage);
+      if (response.status === 400 && msg.toLowerCase().includes("invalid")) {
+        throw new Error("Adresse email ou mot de passe incorrect.");
       }
+
+      if (response.status === 400 && msg.toLowerCase().includes("email not confirmed")) {
+        throw new Error(
+          "Votre email n'a pas encore été confirmé. " +
+          "Vérifiez votre boîte de réception et cliquez sur le lien de confirmation Supabase."
+        );
+      }
+
+      if (response.status === 422) {
+        throw new Error("Format d'email ou de mot de passe invalide.");
+      }
+
+      throw new Error(
+        msg || `Erreur d'authentification (code ${response.status}). Contactez l'administrateur du projet.`
+      );
     }
 
-    // Fallback Emulation Mode (allows out-of-the-box local testing)
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (isLocalBypass) {
-          resolve({
-            email: LOCAL_ADMIN_EMAIL,
-            id: "local-admin-uid-1988",
-            aud: "authenticated"
-          });
-        } else {
-          reject(new Error("Adresse email ou mot de passe incorrect."));
-        }
-      }, 1000);
-    });
-  }
-};
+    const data = await response.json() as { user: { email: string; id: string; aud: string } };
 
-// Helper outside authService block
-function responseStatusIs403(msg: string): boolean {
-  return msg.toLowerCase().includes("403") || msg.toLowerCase().includes("forbidden");
-}
+    if (!data.user) {
+      throw new Error("Réponse inattendue du serveur d'authentification. Veuillez réessayer.");
+    }
+
+    return {
+      email: data.user.email,
+      id: data.user.id,
+      aud: data.user.aud,
+    };
+  },
+};

@@ -20,7 +20,7 @@ import CollectionCouture from "./components/CollectionCouture";
 import CollectionEcrin from "./components/CollectionEcrin";
 import CollectionHeritage from "./components/CollectionHeritage";
 import AdminDashboard from "./components/AdminDashboard";
-import { authService, LOCAL_ADMIN_EMAIL, LOCAL_ADMIN_PASSWORD } from "./authService";
+import { authService } from "./authService";
 
 export default function App() {
   // App stage: "landing" (hero page) | collections
@@ -709,21 +709,12 @@ export default function App() {
                 )}
               </button>
 
-              {/* Micro diagnostic tag showing active backend connection */}
-              <div className="border-t border-white/5 pt-3 text-[8.5px] font-mono text-center flex flex-col gap-1 text-slate-500 uppercase">
-                <div className="flex justify-center items-center gap-1">
-                  <span className={`w-1.5 h-1.5 rounded-full ${authService.isConfigured() ? "bg-emerald-500 animate-pulse" : "bg-blue-500"}`}></span>
-                  <span>
-                    Backend : {authService.isConfigured() ? "Supabase Cloud" : "Émulateur local"}
-                  </span>
-                </div>
-                <div className="normal-case text-[9px] text-stone-400 font-light max-w-[260px] mx-auto leading-normal pt-2 border-t border-white/5 mt-1">
-                  🔑 Clé maître (Bypass Supabase/CORS) :
-                  <div className="mt-1 font-mono text-[9px] text-[#C6A962] bg-white/5 py-1 px-1.5 rounded border border-white/5 flex flex-col items-start gap-0.5 select-all">
-                    <div>Email : <strong className="font-semibold text-white">{LOCAL_ADMIN_EMAIL}</strong></div>
-                    <div>Pass  : <strong className="font-semibold text-white">{LOCAL_ADMIN_PASSWORD}</strong></div>
-                  </div>
-                </div>
+              {/* Supabase connection status indicator */}
+              <div className="border-t border-white/5 pt-3 flex justify-center items-center gap-1.5">
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${authService.isConfigured() ? "bg-emerald-500 animate-pulse" : "bg-red-500"}`}></span>
+                <span className="text-[8.5px] font-mono uppercase text-slate-500">
+                  {authService.isConfigured() ? "Connecté · Supabase Auth" : "Non configuré · Variables d'env manquantes"}
+                </span>
               </div>
             </div>
           </div>
