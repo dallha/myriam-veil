@@ -18,6 +18,7 @@ export interface Product {
   composition?: string;
   entretien?: string;
   livraison?: string;
+  related_product_ids?: string[];
 }
 
 export interface CartItem {

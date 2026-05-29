@@ -74,35 +74,60 @@ export default async function handler(req, res) {
     });
   }
 
-  const data = await supabaseResponse.json().catch(() => ({}));
+  const supabaseText = await supabaseResponse.text();
+  let data = {};
+  try {
+    data = JSON.parse(supabaseText);
+  } catch {
+    data = {};
+  }
 
   if (!supabaseResponse.ok) {
-    const errorCode = data.error_code || data.error || "unknown";
-    const msg = data.error_description || data.msg || data.error || "";
+    const errorCode = String(
+      (data.error_code || data.error || "unknown")
+    ).trim();
+    const msg = String(
+      (data.error_description || data.msg || data.error || supabaseText || "")
+    ).trim();
 
     // Email non confirmé
-    if (errorCode === "email_not_confirmed" || msg.toLowerCase().includes("email not confirmed")) {
+    if (
+      errorCode === "email_not_confirmed" ||
+      msg.toLowerCase().includes("email not confirmed")
+    ) {
       return res.status(403).json({
         error:
           "Votre email n'a pas encore été confirmé. " +
           "Allez dans Supabase → Authentication → Users, trouvez votre email et cliquez sur \"Confirm email\". " +
-          "Ou confirmez-le via SQL : UPDATE auth.users SET email_confirmed_at = NOW() WHERE email = '" + (email + "';"),
+          "Ou confirmez-le via SQL : UPDATE auth.users SET email_confirmed_at = NOW() WHERE email = '" +
+          (email + "';"),
         supabase_error_code: errorCode,
+        supabase_status: supabaseResponse.status,
+        supabase_body: supabaseText,
       });
     }
 
     // Mauvais identifiants
-    if (errorCode === "invalid_credentials" || msg.toLowerCase().includes("invalid")) {
+    if (
+      errorCode === "invalid_credentials" ||
+      msg.toLowerCase().includes("invalid")
+    ) {
       return res.status(401).json({
         error: "Adresse email ou mot de passe incorrect.",
         supabase_error_code: errorCode,
+        supabase_status: supabaseResponse.status,
+        supabase_body: supabaseText,
       });
     }
 
     // Autre erreur Supabase — renvoie le message brut pour diagnostic
     return res.status(supabaseResponse.status).json({
-      error: msg || `Erreur Supabase (code: ${errorCode}, statut: ${supabaseResponse.status}).`,
+      error:
+        msg ||
+        `Erreur Supabase (code: ${errorCode}, statut: ${supabaseResponse.status}).`,
       supabase_error_code: errorCode,
+      supabase_status: supabaseResponse.status,
+      supabase_body: supabaseText,
     });
   }
 

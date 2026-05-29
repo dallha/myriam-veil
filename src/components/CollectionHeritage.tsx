@@ -6,6 +6,8 @@
 import { useState, MouseEvent } from "react";
 import { Product } from "../types";
 import { ArrowLeft, Menu, ShoppingBag, Pencil, Trash2 } from "lucide-react";
+import SEO from "./SEO";
+import CrossSelling from "./CrossSelling";
 
 interface CollectionHeritageProps {
   products: Product[];
@@ -348,6 +350,9 @@ export default function CollectionHeritage({
                       >
                         Acquérir cette pièce
                       </button>
+                      
+                      <CrossSelling relatedIds={prod.related_product_ids} />
+                      <SEO product={prod} />
                     </div>
                   </div>
                 ))

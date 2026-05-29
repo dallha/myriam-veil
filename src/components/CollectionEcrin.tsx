@@ -6,6 +6,8 @@
 import { useState } from "react";
 import { Product } from "../types";
 import { ArrowLeft, ChevronDown, Heart, Plus, ShoppingBag, Pencil, Trash2 } from "lucide-react";
+import SEO from "./SEO";
+import CrossSelling from "./CrossSelling";
 
 interface CollectionEcrinProps {
   products: Product[];
@@ -415,6 +417,9 @@ export default function CollectionEcrin({
                 </div>
               </details>
             </div>
+            
+            <CrossSelling relatedIds={selectedProduct.related_product_ids} />
+            <SEO product={selectedProduct} />
           </main>
 
           {/* Sticky CTA bar for L'Écrin */}

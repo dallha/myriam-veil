@@ -6,6 +6,8 @@
 import { useState } from "react";
 import { Product, CartItem } from "../types";
 import { ChevronDown, Plus, Minus, ArrowLeft, Grid, Sparkles, Pencil, Trash2 } from "lucide-react";
+import SEO from "./SEO";
+import CrossSelling from "./CrossSelling";
 
 interface CollectionCoutureProps {
   products: Product[];
@@ -386,6 +388,9 @@ export default function CollectionCouture({
                   )}
                 </div>
               </div>
+
+              <CrossSelling relatedIds={selectedProduct.related_product_ids} />
+              <SEO product={selectedProduct} />
             </section>
 
             {/* Fixed Bottom CTA bar */}

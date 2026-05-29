@@ -10,6 +10,7 @@ import {
   X, ArrowRight, Heart, Sparkles, User, Info, HelpCircle, 
   Lock, Key, Pencil, Trash2, Plus, AlertCircle, LayoutDashboard, Eye, EyeOff 
 } from "lucide-react";
+import { AnimatePresence, motion } from "motion/react";
 
 import TopAppBar from "./components/TopAppBar";
 import BottomNav from "./components/BottomNav";
@@ -21,57 +22,60 @@ import CollectionEcrin from "./components/CollectionEcrin";
 import CollectionHeritage from "./components/CollectionHeritage";
 import AdminDashboard from "./components/AdminDashboard";
 import { authService } from "./authService";
+import { dataService } from "./dataService";
+
+import { useCartStore } from "./store/useCartStore";
+import { useAppStore } from "./store/useAppStore";
 
 export default function App() {
-  // App stage: "landing" (hero page) | collections
-  const [appStage, setAppStage] = useState<"landing" | "collections">("landing");
-  
-  // Collection lines selection: "origins" (Default Entry split) | "couture" | "ecrin" | "heritage"
-  const [currentCollection, setCurrentCollection] = useState<CollectionId>("origins");
+  const {
+    appStage,
+    currentCollection,
+    isCartOpen,
+    isMenuOpen,
+    setAppStage,
+    setCurrentCollection,
+    setIsCartOpen,
+    setIsMenuOpen,
+    selectCollectionLine,
+    handleEnterCollection
+  } = useAppStore();
+
+  const {
+    cartItems,
+    cartCount,
+    addToCart,
+    updateQuantity: handleUpdateQuantity,
+    removeItem: handleRemoveItem,
+    clearCart: handleClearCart
+  } = useCartStore();
+
+  const handleAddToCart = (product: Product, selectedSize?: string) => {
+    addToCart(product, selectedSize);
+    setIsCartOpen(true);
+  };
 
   // --- Admin Mode Database States ---
-  const [products, setProducts] = useState<Product[]>(() => {
-    try {
-      const stored = localStorage.getItem("myriam_veil_products");
-      if (!stored) return PRODUCTS;
-      const parsed = JSON.parse(stored);
-      if (!Array.isArray(parsed)) return PRODUCTS;
-      return parsed;
-    } catch {
-      return PRODUCTS;
-    }
-  });
+  const [products, setProducts] = useState<Product[]>([]);
+  const [homepageContent, setHomepageContent] = useState<HomepageContent>(DEFAULT_HOMEPAGE_CONTENT);
+  const [orders, setOrders] = useState<Order[]>([]);
 
-  const [homepageContent, setHomepageContent] = useState<HomepageContent>(() => {
-    try {
-      const stored = localStorage.getItem("myriam_veil_homepage");
-      if (!stored) return DEFAULT_HOMEPAGE_CONTENT;
-      return JSON.parse(stored);
-    } catch {
-      return DEFAULT_HOMEPAGE_CONTENT;
-    }
-  });
+  useEffect(() => {
+    // Initial fetch from Supabase (or local storage fallback)
+    dataService.getProducts().then(setProducts);
+    dataService.getHomepageContent().then(setHomepageContent);
+    dataService.getOrders().then(setOrders);
+  }, []);
 
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isAdminDashboardOpen, setIsAdminDashboardOpen] = useState(false);
 
-  // Placed Orders database state
-  const [orders, setOrders] = useState<Order[]>(() => {
-    try {
-      const stored = localStorage.getItem("myriam_veil_orders");
-      if (!stored) return [];
-      const parsed = JSON.parse(stored);
-      if (!Array.isArray(parsed)) return [];
-      return parsed;
-    } catch {
-      return [];
-    }
-  });
-
   // Sync orders state to client-side localStorage
   useEffect(() => {
-    localStorage.setItem("myriam_veil_orders", JSON.stringify(orders));
+    if (orders.length > 0) {
+      localStorage.setItem("myriam_veil_orders", JSON.stringify(orders));
+    }
   }, [orders]);
 
   // Modals UI & Auth
@@ -87,100 +91,7 @@ export default function App() {
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [productForm, setProductForm] = useState<Partial<Product>>({});
 
-  // Shopping Cart items state (hydrating from localStorage if present)
-  const [cartItems, setCartItems] = useState<CartItem[]>(() => {
-    try {
-      const stored = localStorage.getItem("myriam_veil_cart");
-      if (!stored) return [];
-      const parsed = JSON.parse(stored);
-      // Validate that parsed data is an array of CartItem-like objects
-      if (!Array.isArray(parsed)) return [];
-      return parsed.filter(
-        (item: unknown): item is CartItem =>
-          typeof item === "object" &&
-          item !== null &&
-          "product" in item &&
-          "quantity" in item &&
-          typeof (item as Record<string, unknown>).quantity === "number"
-      );
-    } catch {
-      return [];
-    }
-  });
-
-  // UI state overlays
-  const [isCartOpen, setIsCartOpen] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-
-  // Sync cart items to client-side localStorage
-  useEffect(() => {
-    localStorage.setItem("myriam_veil_cart", JSON.stringify(cartItems));
-  }, [cartItems]);
-
-  // Compute total cart quantity items in checkout
-  const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
-
-  // Cart operations
-  const handleAddToCart = (product: Product, selectedSize?: string) => {
-    setCartItems((prevItems) => {
-      // Find matching item by ID and optionally selected size
-      const existingIdx = prevItems.findIndex(
-        (item) => item.product.id === product.id && item.selectedSize === selectedSize
-      );
-
-      if (existingIdx > -1) {
-        const updated = [...prevItems];
-        updated[existingIdx].quantity += 1;
-        return updated;
-      } else {
-        return [...prevItems, { product, quantity: 1, selectedSize }];
-      }
-    });
-
-    // Momentary slight pop on basket to catch attention
-    setIsCartOpen(true);
-  };
-
-  const handleUpdateQuantity = (productId: string, quantity: number, selectedSize?: string) => {
-    if (quantity < 1) {
-      handleRemoveItem(productId, selectedSize);
-      return;
-    }
-
-    setCartItems((prevItems) =>
-      prevItems.map((item) =>
-        item.product.id === productId && item.selectedSize === selectedSize
-          ? { ...item, quantity }
-          : item
-      )
-    );
-  };
-
-  const handleRemoveItem = (productId: string, selectedSize?: string) => {
-    setCartItems((prevItems) =>
-      prevItems.filter(
-        (item) => !(item.product.id === productId && item.selectedSize === selectedSize)
-      )
-    );
-  };
-
-  const handleClearCart = () => {
-    setCartItems([]);
-  };
-
-  const selectCollectionLine = (lineId: CollectionId) => {
-    setAppStage("collections");
-    setCurrentCollection(lineId);
-    setIsMenuOpen(false);
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  // Handle entering the collections from the landing page
-  const handleEnterCollection = () => {
-    setAppStage("collections");
-    setCurrentCollection("origins");
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  // Shopping Cart and App State are managed by Zustand stores.
 
   // --- Admin Mode Database Operations ---
   const handleAdminLogin = async () => {
@@ -362,58 +273,76 @@ export default function App() {
         brandTitleOverride={appStage === "landing" ? "MYRIAM VEIL" : undefined}
       />
 
-      {/* 2. ADAPTIVE LINE VIEWPORT ROUTING */}
-      <main className="flex-1 w-full z-10">
-        {appStage === "landing" ? (
-          <LandingPage 
-            onEnterCollection={handleEnterCollection} 
-            content={homepageContent}
-            isAdminMode={isAdminMode}
-            onUpdateContent={(newContent) => {
-              setHomepageContent(newContent);
-              setHasUnsavedChanges(true);
-            }}
-          />
-        ) : (
-          <>
-            {currentCollection === "origins" && (
-              <OrigineEntry onSelectCollection={selectCollectionLine} />
-            )}
-
-            {currentCollection === "couture" && (
-              <CollectionCouture
-                products={products.filter((p) => p.collectionId === "couture")}
-                onAddToCart={handleAddToCart}
+      {/* 2. ADAPTIVE LINE VIEWPORT ROUTING WITH ANIMATIONS */}
+      <main className="flex-1 w-full z-10 flex flex-col">
+        <AnimatePresence mode="wait">
+          {appStage === "landing" ? (
+            <motion.div
+              key="landing"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.4 }}
+              className="flex-1 w-full"
+            >
+              <LandingPage 
+                onEnterCollection={handleEnterCollection} 
+                content={homepageContent}
                 isAdminMode={isAdminMode}
-                onEditProduct={handleOpenEditProduct}
-                onDeleteProduct={handleDeleteProduct}
-                onAddProduct={handleOpenAddProduct}
+                onUpdateContent={(newContent) => {
+                  setHomepageContent(newContent);
+                  setHasUnsavedChanges(true);
+                }}
               />
-            )}
+            </motion.div>
+          ) : (
+            <motion.div
+              key={`collection-${currentCollection}`}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.4 }}
+              className="flex-1 w-full"
+            >
+              {currentCollection === "origins" && (
+                <OrigineEntry onSelectCollection={selectCollectionLine} />
+              )}
 
-            {currentCollection === "ecrin" && (
-              <CollectionEcrin
-                products={products.filter((p) => p.collectionId === "ecrin")}
-                onAddToCart={handleAddToCart}
-                isAdminMode={isAdminMode}
-                onEditProduct={handleOpenEditProduct}
-                onDeleteProduct={handleDeleteProduct}
-                onAddProduct={handleOpenAddProduct}
-              />
-            )}
+              {currentCollection === "couture" && (
+                <CollectionCouture
+                  products={products.filter((p) => p.collectionId === "couture")}
+                  onAddToCart={handleAddToCart}
+                  isAdminMode={isAdminMode}
+                  onEditProduct={handleOpenEditProduct}
+                  onDeleteProduct={handleDeleteProduct}
+                  onAddProduct={handleOpenAddProduct}
+                />
+              )}
 
-            {currentCollection === "heritage" && (
-              <CollectionHeritage
-                products={products.filter((p) => p.collectionId === "heritage")}
-                onAddToCart={handleAddToCart}
-                isAdminMode={isAdminMode}
-                onEditProduct={handleOpenEditProduct}
-                onDeleteProduct={handleDeleteProduct}
-                onAddProduct={handleOpenAddProduct}
-              />
-            )}
-          </>
-        )}
+              {currentCollection === "ecrin" && (
+                <CollectionEcrin
+                  products={products.filter((p) => p.collectionId === "ecrin")}
+                  onAddToCart={handleAddToCart}
+                  isAdminMode={isAdminMode}
+                  onEditProduct={handleOpenEditProduct}
+                  onDeleteProduct={handleDeleteProduct}
+                  onAddProduct={handleOpenAddProduct}
+                />
+              )}
+
+              {currentCollection === "heritage" && (
+                <CollectionHeritage
+                  products={products.filter((p) => p.collectionId === "heritage")}
+                  onAddToCart={handleAddToCart}
+                  isAdminMode={isAdminMode}
+                  onEditProduct={handleOpenEditProduct}
+                  onDeleteProduct={handleDeleteProduct}
+                  onAddProduct={handleOpenAddProduct}
+                />
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
 
       {/* 3. UNIVERSAL FLOATING NAV PILL */}
