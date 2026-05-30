@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Product, CartItem } from "../types";
 import { ChevronDown, Plus, Minus, ArrowLeft, Grid, Sparkles, Pencil, Trash2 } from "lucide-react";
 import SEO from "./SEO";
@@ -16,6 +16,7 @@ interface CollectionCoutureProps {
   onEditProduct: (product: Product) => void;
   onDeleteProduct: (productId: string) => void;
   onAddProduct: (collectionId: "couture") => void;
+  onProductDetailToggle?: (isOpen: boolean) => void;
 }
 
 export default function CollectionCouture({ 
@@ -24,11 +25,21 @@ export default function CollectionCouture({
   isAdminMode,
   onEditProduct,
   onDeleteProduct,
-  onAddProduct
+  onAddProduct,
+  onProductDetailToggle
 }: CollectionCoutureProps) {
   // Navigation states: 'grid' or 'detail'
   const [viewState, setViewState] = useState<"grid" | "detail">("grid");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  useEffect(() => {
+    if (onProductDetailToggle) {
+      onProductDetailToggle(viewState === "detail");
+    }
+    return () => {
+      if (onProductDetailToggle) onProductDetailToggle(false);
+    };
+  }, [viewState, onProductDetailToggle]);
 
   // Detail View Configs
   const [activeImageIndex, setActiveImageIndex] = useState(0);

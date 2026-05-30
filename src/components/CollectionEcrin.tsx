@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Product } from "../types";
 import { ArrowLeft, ChevronDown, Heart, Plus, ShoppingBag, Pencil, Trash2 } from "lucide-react";
 import SEO from "./SEO";
@@ -16,6 +16,7 @@ interface CollectionEcrinProps {
   onEditProduct: (product: Product) => void;
   onDeleteProduct: (productId: string) => void;
   onAddProduct: (collectionId: "ecrin") => void;
+  onProductDetailToggle?: (isOpen: boolean) => void;
 }
 
 export default function CollectionEcrin({ 
@@ -24,11 +25,21 @@ export default function CollectionEcrin({
   isAdminMode,
   onEditProduct,
   onDeleteProduct,
-  onAddProduct
+  onAddProduct,
+  onProductDetailToggle
 }: CollectionEcrinProps) {
   // Navigation: 'home' (Screen 3) | 'catalog' (Screen 8) | 'detail' (Screen 9)
   const [stage, setStage] = useState<"home" | "catalog" | "detail">("home");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  useEffect(() => {
+    if (onProductDetailToggle) {
+      onProductDetailToggle(stage === "detail");
+    }
+    return () => {
+      if (onProductDetailToggle) onProductDetailToggle(false);
+    };
+  }, [stage, onProductDetailToggle]);
 
   // Filter criteria for L'Écrin
   const [selectedCategory, setSelectedCategory] = useState<string>("Toutes les pièces");

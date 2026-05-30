@@ -65,6 +65,7 @@ export default function App() {
   const [homepageContent, setHomepageContent] = useState<HomepageContent>(DEFAULT_HOMEPAGE_CONTENT);
   const [orders, setOrders] = useState<Order[]>([]);
   const [paymentSuccessOrder, setPaymentSuccessOrder] = useState<Order | null>(null);
+  const [isProductDetailOpen, setIsProductDetailOpen] = useState(false);
 
   useEffect(() => {
     // Initial fetch from Supabase (or local storage fallback)
@@ -492,6 +493,7 @@ export default function App() {
                   onEditProduct={handleOpenEditProduct}
                   onDeleteProduct={handleDeleteProduct}
                   onAddProduct={handleOpenAddProduct}
+                  onProductDetailToggle={(isOpen) => setIsProductDetailOpen(isOpen)}
                 />
               )}
 
@@ -503,6 +505,7 @@ export default function App() {
                   onEditProduct={handleOpenEditProduct}
                   onDeleteProduct={handleDeleteProduct}
                   onAddProduct={handleOpenAddProduct}
+                  onProductDetailToggle={(isOpen) => setIsProductDetailOpen(isOpen)}
                 />
               )}
 
@@ -522,7 +525,7 @@ export default function App() {
       </main>
 
       {/* 3. UNIVERSAL FLOATING NAV PILL */}
-      {appStage === "collections" && (
+      {appStage === "collections" && !isProductDetailOpen && (
         <BottomNav
           currentCollection={currentCollection}
           onSetCollection={selectCollectionLine}
@@ -1043,7 +1046,7 @@ export default function App() {
       )}
 
       {/* Floating WhatsApp contact button */}
-      {!isAdminMode && (
+      {!isAdminMode && !isProductDetailOpen && (
         <a
           href={`https://wa.me/${(homepageContent.whatsappNumber || "221773194279").replace(/[^0-9]/g, "")}?text=${encodeURIComponent(homepageContent.whatsappMessage || "Bonjour Maison Myriam Veil, je souhaiterais me renseigner sur vos pièces d'exception.")}`}
           target="_blank"
