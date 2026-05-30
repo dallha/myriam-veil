@@ -20,6 +20,7 @@ export interface Product {
   livraison?: string;
   related_product_ids?: string[];
   visible?: boolean;
+  compareAtPrice?: number;
 }
 
 export interface CartItem {

@@ -1007,8 +1007,15 @@ export default function AdminDashboard({
                                 </span>
                               </td>
                               <td className="px-5 py-3 text-slate-400">{product.category || "---"}</td>
-                              <td className="px-5 py-3 text-right font-mono font-bold text-white">
-                                {product.price.toLocaleString('fr-FR')} FCFA
+                              <td className="px-5 py-3 text-right font-mono font-bold">
+                                {product.compareAtPrice && product.compareAtPrice > product.price && (
+                                  <div className="text-[10px] text-slate-500 line-through font-normal mb-0.5 leading-none">
+                                    {product.compareAtPrice.toLocaleString('fr-FR')} FCFA
+                                  </div>
+                                )}
+                                <div className="text-white leading-none">
+                                  {product.price.toLocaleString('fr-FR')} FCFA
+                                </div>
                               </td>
                               <td className="px-5 py-3">
                                 <div className="flex justify-center items-center gap-2">

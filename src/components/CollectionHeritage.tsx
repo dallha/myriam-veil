@@ -337,7 +337,16 @@ export default function CollectionHeritage({
                     <div className="p-6">
                       <div className="flex justify-between items-baseline mb-3">
                         <h4 className="font-serif text-xl text-[#2C2825] font-semibold">{prod.name}</h4>
-                        <span className="text-base font-semibold text-[#b84b14]">{prod.price.toLocaleString('fr-FR')} FCFA</span>
+                        <div className="flex flex-col items-end shrink-0 font-mono">
+                          {prod.compareAtPrice && prod.compareAtPrice > prod.price && (
+                            <span className="text-xs text-[#A8A39D] line-through leading-none mb-1">
+                              {prod.compareAtPrice.toLocaleString('fr-FR')} FCFA
+                            </span>
+                          )}
+                          <span className="text-base font-semibold text-[#b84b14] leading-none">
+                            {prod.price.toLocaleString('fr-FR')} FCFA
+                          </span>
+                        </div>
                       </div>
 
                       <p className="text-xs text-[#4A4540]/80 leading-relaxed font-light mb-6">

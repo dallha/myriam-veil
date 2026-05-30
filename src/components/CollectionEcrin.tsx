@@ -139,9 +139,16 @@ export default function CollectionEcrin({
                       <h3 className="font-serif text-base text-white group-hover:text-fuchsia-400 transition-colors">
                         {prod.name}
                       </h3>
-                      <p className="text-xs text-fuchsia-300 mt-0.5 font-mono">
-                        {prod.price.toLocaleString('fr-FR')} FCFA
-                      </p>
+                      <div className="flex items-center justify-center gap-2 mt-0.5 font-mono">
+                        {prod.compareAtPrice && prod.compareAtPrice > prod.price && (
+                          <span className="text-[10px] text-slate-500 line-through">
+                            {prod.compareAtPrice.toLocaleString('fr-FR')} FCFA
+                          </span>
+                        )}
+                        <p className="text-xs text-fuchsia-300">
+                          {prod.price.toLocaleString('fr-FR')} FCFA
+                        </p>
+                      </div>
                     </div>
                   </article>
                 ))}
@@ -245,9 +252,16 @@ export default function CollectionEcrin({
                         <h3 className="font-serif text-base text-white group-hover:text-fuchsia-400 transition-colors leading-tight">
                           {prod.name}
                         </h3>
-                        <p className="text-xs text-fuchsia-400 font-mono">
-                          {prod.price.toLocaleString('fr-FR')} FCFA
-                        </p>
+                        <div className="flex items-center gap-2 font-mono">
+                          {prod.compareAtPrice && prod.compareAtPrice > prod.price && (
+                            <span className="text-[10px] text-slate-500 line-through">
+                              {prod.compareAtPrice.toLocaleString('fr-FR')} FCFA
+                            </span>
+                          )}
+                          <p className="text-xs text-fuchsia-400">
+                            {prod.price.toLocaleString('fr-FR')} FCFA
+                          </p>
+                        </div>
                       </div>
                     </article>
                   ))}
@@ -302,9 +316,16 @@ export default function CollectionEcrin({
                         <h3 className="font-serif text-base text-white group-hover:text-fuchsia-400 transition-colors leading-tight">
                           {prod.name}
                         </h3>
-                        <p className="text-xs text-fuchsia-400 font-mono">
-                          {prod.price.toLocaleString('fr-FR')} FCFA
-                        </p>
+                        <div className="flex items-center gap-2 font-mono">
+                          {prod.compareAtPrice && prod.compareAtPrice > prod.price && (
+                            <span className="text-[10px] text-slate-500 line-through">
+                              {prod.compareAtPrice.toLocaleString('fr-FR')} FCFA
+                            </span>
+                          )}
+                          <p className="text-xs text-fuchsia-400">
+                            {prod.price.toLocaleString('fr-FR')} FCFA
+                          </p>
+                        </div>
                       </div>
                     </article>
                   ))}
@@ -377,9 +398,16 @@ export default function CollectionEcrin({
               <h1 className="font-display font-medium text-[28px] md:text-[32px] leading-tight text-white w-2/3">
                 {selectedProduct.name}
               </h1>
-              <span className="font-mono text-xl md:text-2xl text-fuchsia-400 mt-1">
-                {selectedProduct.price.toLocaleString('fr-FR')} FCFA
-              </span>
+              <div className="flex flex-col items-end shrink-0 font-mono mt-1">
+                {selectedProduct.compareAtPrice && selectedProduct.compareAtPrice > selectedProduct.price && (
+                  <span className="text-xs text-slate-500 line-through leading-none mb-1">
+                    {selectedProduct.compareAtPrice.toLocaleString('fr-FR')} FCFA
+                  </span>
+                )}
+                <span className="text-xl md:text-2xl text-fuchsia-400 leading-none">
+                  {selectedProduct.price.toLocaleString('fr-FR')} FCFA
+                </span>
+              </div>
             </div>
 
             {/* Mineral material luxury badges */}

@@ -201,9 +201,16 @@ export default function CollectionCouture({
                           {prod.category}
                         </p>
                       </div>
-                      <span className="text-xs md:text-sm font-semibold text-blue-400 shrink-0 font-mono">
-                        {prod.price.toLocaleString('fr-FR')} FCFA
-                      </span>
+                      <div className="flex flex-col items-end shrink-0 font-mono">
+                        {prod.compareAtPrice && prod.compareAtPrice > prod.price && (
+                          <span className="text-[10px] text-slate-500 line-through leading-none mb-0.5">
+                            {prod.compareAtPrice.toLocaleString('fr-FR')} FCFA
+                          </span>
+                        )}
+                        <span className="text-xs md:text-sm font-semibold text-blue-400 leading-none">
+                          {prod.price.toLocaleString('fr-FR')} FCFA
+                        </span>
+                      </div>
                     </div>
                   </article>
                 );
@@ -301,9 +308,16 @@ export default function CollectionCouture({
                 <h2 className="text-2xl font-bold uppercase tracking-tight leading-none text-white w-2/3">
                   {selectedProduct.name}
                 </h2>
-                <p className="text-xl font-bold text-fuchsia-400 font-mono whitespace-nowrap">
-                  {selectedProduct.price.toLocaleString('fr-FR')} FCFA
-                </p>
+                <div className="flex flex-col items-end font-mono whitespace-nowrap shrink-0">
+                  {selectedProduct.compareAtPrice && selectedProduct.compareAtPrice > selectedProduct.price && (
+                    <span className="text-xs text-slate-500 line-through leading-none mb-1">
+                      {selectedProduct.compareAtPrice.toLocaleString('fr-FR')} FCFA
+                    </span>
+                  )}
+                  <p className="text-xl font-bold text-fuchsia-400 leading-none">
+                    {selectedProduct.price.toLocaleString('fr-FR')} FCFA
+                  </p>
+                </div>
               </div>
 
               <p className="text-xs md:text-sm leading-relaxed text-justify mb-8 tracking-wide font-light text-slate-300">

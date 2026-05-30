@@ -929,7 +929,7 @@ export default function App() {
             </header>
 
             <div className="p-6 overflow-y-auto space-y-4 flex-1 text-sm font-light">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Nom de la pièce</label>
                   <input
@@ -947,6 +947,16 @@ export default function App() {
                     value={productForm.price || 0}
                     onChange={(e) => setProductForm({ ...productForm, price: Number(e.target.value) })}
                     className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Prix barré (optionnel)</label>
+                  <input
+                    type="number"
+                    value={productForm.compareAtPrice || ""}
+                    onChange={(e) => setProductForm({ ...productForm, compareAtPrice: e.target.value ? Number(e.target.value) : undefined })}
+                    className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none"
+                    placeholder="Ex: 45000"
                   />
                 </div>
               </div>
