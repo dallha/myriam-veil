@@ -97,6 +97,8 @@ export interface Order {
   total: number;
   date: string;
   status: "Nouvelle" | "En préparation" | "Expédiée" | "Livrée";
+  paymentMethod?: "delivery" | "online";
+  paymentStatus?: "Payé" | "À la livraison" | "Échoué";
 }
 
 export interface BlogPost {

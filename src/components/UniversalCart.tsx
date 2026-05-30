@@ -35,6 +35,7 @@ export default function UniversalCart({
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
   const [deliveryOption, setDeliveryOption] = useState<"dakar" | "hors-dakar">("dakar");
+  const [paymentMethod, setPaymentMethod] = useState<"delivery" | "online">("online");
   const [placedOrderNumber, setPlacedOrderNumber] = useState("");
 
   if (!isOpen) return null;
@@ -47,7 +48,7 @@ export default function UniversalCart({
   const totalItemCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
   // Handle Checkout submission
-  const handleCheckoutSubmit = (e: React.FormEvent) => {
+  const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!customerName.trim() || !customerPhone.trim() || !customerAddress.trim()) {
       alert("Veuillez renseigner toutes vos coordonnées de livraison.");
@@ -60,6 +61,14 @@ export default function UniversalCart({
     const newOrderNumber = `MV-${new Date().getFullYear()}-${randomNum}`;
     setPlacedOrderNumber(newOrderNumber);
 
+    const dateStr = new Date().toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+
     const newOrder: Order = {
       id: newOrderNumber,
       customerName: customerName.trim(),
@@ -69,34 +78,62 @@ export default function UniversalCart({
       items: [...cartItems],
       subtotal,
       total,
-      date: new Date().toLocaleDateString('fr-FR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      }),
-      status: "Nouvelle"
+      date: dateStr,
+      status: "Nouvelle",
+      paymentMethod,
+      paymentStatus: paymentMethod === "online" ? "Non payé" : "À la livraison"
     };
 
-    setTimeout(() => {
-      // Place the order
-      onPlaceOrder(newOrder);
-      
-      setIsCheckingOut(false);
-      setOrderPlaced(true);
-      
+    if (paymentMethod === "online") {
+      try {
+        // Enregistrer temporairement dans le localStorage pour restauration au retour
+        localStorage.setItem("mv_pending_checkout", JSON.stringify(newOrder));
+
+        const response = await fetch("/api/paytech", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            orderId: newOrderNumber,
+            total,
+            customerName: customerName.trim()
+          })
+        });
+
+        const resData = await response.json();
+        
+        if (response.ok && resData.redirect_url) {
+          // Redirection vers l'interface de paiement sécurisé PayTech
+          window.location.href = resData.redirect_url;
+        } else {
+          alert(resData.error || "Impossible d'initier le paiement en ligne. Veuillez réessayer.");
+          setIsCheckingOut(false);
+        }
+      } catch (err) {
+        console.error("Erreur d'initialisation de paiement:", err);
+        alert("Une erreur est survenue lors de la connexion au service de paiement.");
+        setIsCheckingOut(false);
+      }
+    } else {
+      // Paiement à la livraison classique
       setTimeout(() => {
-        onClearCart();
-        setOrderPlaced(false);
-        setShowCheckoutForm(false);
-        setCustomerName("");
-        setCustomerPhone("");
-        setCustomerAddress("");
-        setDeliveryOption("dakar");
-        onClose();
-      }, 4000);
-    }, 1500);
+        onPlaceOrder(newOrder);
+        setIsCheckingOut(false);
+        setOrderPlaced(true);
+        
+        setTimeout(() => {
+          onClearCart();
+          setOrderPlaced(false);
+          setShowCheckoutForm(false);
+          setCustomerName("");
+          setCustomerPhone("");
+          setCustomerAddress("");
+          setDeliveryOption("dakar");
+          onClose();
+        }, 4000);
+      }, 1500);
+    }
   };
 
   return (
@@ -234,6 +271,46 @@ export default function UniversalCart({
                       <span className="text-xs font-bold uppercase text-white">Hors Dakar</span>
                       <span className="text-[10px] text-slate-400 mt-1 font-light">3 000 FCFA · Régions</span>
                       {deliveryOption === "hors-dakar" && <Check className="w-4 h-4 text-fuchsia-400 mt-2 self-end" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* 5. Payment Method Selector */}
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
+                    Méthode de paiement
+                  </label>
+                  <div className="grid grid-cols-1 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod("delivery")}
+                      className={`p-4 border rounded-xl flex items-center justify-between transition-all cursor-pointer ${
+                        paymentMethod === "delivery"
+                          ? "bg-blue-600/10 border-blue-500 shadow-md shadow-blue-500/10"
+                          : "bg-white/5 border-white/10 hover:border-white/20"
+                      }`}
+                    >
+                      <div className="text-left">
+                        <span className="text-xs font-bold uppercase text-white">💵 Paiement à la livraison</span>
+                        <span className="block text-[10px] text-slate-400 mt-1 font-light">Payez en espèces lors de la livraison</span>
+                      </div>
+                      {paymentMethod === "delivery" && <Check className="w-4 h-4 text-blue-400 shrink-0" />}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod("online")}
+                      className={`p-4 border rounded-xl flex items-center justify-between transition-all cursor-pointer ${
+                        paymentMethod === "online"
+                          ? "bg-fuchsia-600/10 border-fuchsia-500 shadow-md shadow-fuchsia-500/10"
+                          : "bg-white/5 border-white/10 hover:border-white/20"
+                      }`}
+                    >
+                      <div className="text-left">
+                        <span className="text-xs font-bold uppercase text-white">💳 Paiement en ligne sécurisé</span>
+                        <span className="block text-[10px] text-slate-400 mt-1 font-light">Wave, Orange Money, Carte Bancaire (PayTech)</span>
+                      </div>
+                      {paymentMethod === "online" && <Check className="w-4 h-4 text-fuchsia-400 shrink-0" />}
                     </button>
                   </div>
                 </div>

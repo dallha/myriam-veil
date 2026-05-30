@@ -231,8 +231,8 @@ export default function AdminDashboard({
 
   const handleExportOrdersCSV = () => {
     if (orders.length === 0) return;
-    const header = "ID,Client,Telephone,Montant,Statut,Date\n";
-    const rows = orders.map(o => `${o.id},"${o.customerName}","${o.customerPhone}",${o.total},"${o.status}","${o.date}"`).join("\n");
+    const header = "ID,Client,Telephone,Montant,Statut,Date,ModePaiement,StatutReglement\n";
+    const rows = orders.map(o => `${o.id},"${o.customerName}","${o.customerPhone}",${o.total},"${o.status}","${o.date}","${o.paymentMethod === 'online' ? 'En ligne' : 'A la livraison'}","${o.paymentStatus || 'Non payé'}"`).join("\n");
     const csvContent = "data:text/csv;charset=utf-8," + header + rows;
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -776,17 +776,35 @@ export default function AdminDashboard({
                                     Logistique & Facturation
                                   </h4>
                                   <p className="flex items-center gap-2">
-                                    <span className="text-slate-500 font-bold uppercase w-20">Expédition :</span>
+                                    <span className="text-slate-500 font-bold uppercase w-24">Expédition :</span>
                                     <span className={`font-bold ${order.deliveryOption === "dakar" ? "text-blue-400" : "text-fuchsia-400"}`}>
                                       {order.deliveryOption === "dakar" ? "Dakar Express (Gratuit)" : "Hors Dakar (+3 000 FCFA)"}
                                     </span>
                                   </p>
                                   <p className="flex items-center gap-2">
-                                    <span className="text-slate-500 font-bold uppercase w-20">Sous-total :</span>
+                                    <span className="text-slate-500 font-bold uppercase w-24">Paiement :</span>
+                                    <span className="font-semibold text-slate-300">
+                                      {order.paymentMethod === "online" ? "💳 En ligne (Wave/OM/Carte)" : "💵 À la livraison"}
+                                    </span>
+                                  </p>
+                                  <p className="flex items-center gap-2">
+                                    <span className="text-slate-500 font-bold uppercase w-24">Règlement :</span>
+                                    <span className={`font-bold px-2 py-0.5 rounded text-[9px] uppercase tracking-wider ${
+                                      order.paymentStatus === "Payé"
+                                        ? "bg-emerald-500/10 border border-emerald-500/20 text-emerald-400"
+                                        : order.paymentStatus === "À la livraison"
+                                        ? "bg-blue-500/10 border border-blue-500/20 text-blue-400"
+                                        : "bg-red-500/10 border border-red-500/20 text-red-400"
+                                    }`}>
+                                      {order.paymentStatus || "À la livraison"}
+                                    </span>
+                                  </p>
+                                  <p className="flex items-center gap-2">
+                                    <span className="text-slate-500 font-bold uppercase w-24">Sous-total :</span>
                                     <span className="font-mono text-white font-semibold">{order.subtotal.toLocaleString('fr-FR')} FCFA</span>
                                   </p>
                                   <p className="flex items-center gap-2">
-                                    <span className="text-slate-500 font-bold uppercase w-20">TVA (18% incl.) :</span>
+                                    <span className="text-slate-500 font-bold uppercase w-24">TVA (18% incl.) :</span>
                                     <span className="font-mono text-slate-400">{Math.round(order.total * 0.18).toLocaleString('fr-FR')} FCFA</span>
                                   </p>
                                 </div>
