@@ -63,7 +63,7 @@ export default async function handler(req, res) {
     item_price: Number(total),
     command_name: `Paiement ${orderId}`,
     ref_command: orderId,
-    env: "live", // Passer en live pour les clés réelles
+    env: "prod", // Passer en production pour les clés réelles (autorisé : prod, test)
     ipn_url: ipnUrl,
     success_url: successUrl,
     cancel_url: cancelUrl,
