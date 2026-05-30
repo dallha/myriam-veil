@@ -102,7 +102,7 @@ export default function LandingPage({
         <div
           className="absolute inset-0 z-0"
           style={{
-            background: "linear-gradient(to right, rgba(250,248,245,0.95) 40%, rgba(250,248,245,0.4)), url('https://images.unsplash.com/photo-1445205170230-053b83016050?q=80&w=2000&auto=format&fit=crop') center/cover no-repeat",
+            background: `linear-gradient(to right, rgba(250,248,245,0.95) 40%, rgba(250,248,245,0.4)), url('${content.heroBgUrl || "https://images.unsplash.com/photo-1445205170230-053b83016050?q=80&w=2000&auto=format&fit=crop"}') center/cover no-repeat`,
           }}
         />
         
@@ -142,7 +142,7 @@ export default function LandingPage({
             onClick={onEnterCollection}
             className="inline-block px-14 py-4 bg-[#222222] text-[#FAF8F5] tracking-[3px] text-xs uppercase border border-[#222222] transition-all duration-500 hover:bg-transparent hover:text-[#222222] cursor-pointer font-bold rounded-sm shadow-md"
           >
-            Découvrir
+            {content.heroCtaText || "Découvrir"}
           </button>
         </div>
         
@@ -186,6 +186,44 @@ export default function LandingPage({
         <p className="max-w-3xl mx-auto text-sm md:text-lg leading-[2] text-[#cccccc] whitespace-pre-line text-justify md:text-center font-light">
           {content.historyText}
         </p>
+      </section>
+
+      {/* ===== REASSURANCE & CONFIDENCE ===== */}
+      <section className="py-20 px-[10%] bg-white border-b border-[#F2F0ED] text-[#222222]">
+        <div className="max-w-6xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-12">
+          {/* Left stats */}
+          <div className="flex gap-10 shrink-0 w-full lg:w-auto justify-center lg:justify-start">
+            <div className="text-left">
+              <span className="font-serif text-4xl font-bold text-[#C6A962] block mb-1">{content.statsClients || "2 500+"}</span>
+              <span className="text-[10px] uppercase font-bold tracking-widest text-[#555555]">Clients Satisfaits</span>
+            </div>
+            <div className="text-left border-l border-[#F2F0ED] pl-10">
+              <span className="font-serif text-4xl font-bold text-[#C6A962] block mb-1 flex items-center gap-1.5">
+                {content.statsRating || "4.9/5"} <Star className="w-4 h-4 fill-[#C6A962] text-[#C6A962]" />
+              </span>
+              <span className="text-[10px] uppercase font-bold tracking-widest text-[#555555]">Note Moyenne</span>
+            </div>
+          </div>
+          
+          {/* Right reassuring benefits list */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 flex-1 w-full">
+            {/* Benefit 1 */}
+            <div className="p-5 border border-[#F2F0ED] rounded-xl text-left bg-[#FAF8F5]/50 hover:border-[#C6A962]/40 transition-colors">
+              <h4 className="font-serif text-sm font-bold mb-2 text-[#222222]">{content.reassurance1?.title || "Livraison Offerte"}</h4>
+              <p className="text-xs text-[#555555] leading-relaxed font-light">{content.reassurance1?.desc || "Dakar & régions, expédiée sous 24-48 heures dans nos écrins signatures."}</p>
+            </div>
+            {/* Benefit 2 */}
+            <div className="p-5 border border-[#F2F0ED] rounded-xl text-left bg-[#FAF8F5]/50 hover:border-[#C6A962]/40 transition-colors">
+              <h4 className="font-serif text-sm font-bold mb-2 text-[#222222]">{content.reassurance2?.title || "Paiement Sécurisé"}</h4>
+              <p className="text-xs text-[#555555] leading-relaxed font-light">{content.reassurance2?.desc || "Réglez en toute sérénité en espèces au moment de la livraison à votre domicile."}</p>
+            </div>
+            {/* Benefit 3 */}
+            <div className="p-5 border border-[#F2F0ED] rounded-xl text-left bg-[#FAF8F5]/50 hover:border-[#C6A962]/40 transition-colors">
+              <h4 className="font-serif text-sm font-bold mb-2 text-[#222222]">{content.reassurance3?.title || "Service Premium"}</h4>
+              <p className="text-xs text-[#555555] leading-relaxed font-light">{content.reassurance3?.desc || "Conseiller dédié disponible 7j/7 pour vous accompagner par WhatsApp."}</p>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* ===== 3. VALEURS ===== */}
@@ -311,15 +349,15 @@ export default function LandingPage({
       <footer className="bg-[#222222] text-white px-[10%] py-16 pb-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
           <div>
-            <h3 className="font-serif text-2xl mb-5">MYRIAM VEIL</h3>
+            <h3 className="font-serif text-2xl mb-5">{content.logoText || "MYRIAM VEIL"}</h3>
             <p className="text-[#888888] leading-relaxed text-xs md:text-sm font-light">
               L'Élégance de la Pudeur, l'Héritage d'une Mère. Une invitation à se tenir avec intention et à incarner une élégance digne.
             </p>
             <div className="flex gap-3 mt-5">
               {[
-                { icon: "📷", url: "https://www.instagram.com/mintymarieme" },
-                { icon: "👍", url: "https://www.facebook.com/mintymarieme" },
-                { icon: "🎵", url: "https://www.tiktok.com/@mintymarieme" },
+                { icon: "📷", url: content.instagramUrl || "https://www.instagram.com/mintymarieme" },
+                { icon: "👍", url: content.facebookUrl || "https://www.facebook.com/mintymarieme" },
+                { icon: "🎵", url: content.tiktokUrl || "https://www.tiktok.com/@mintymarieme" },
               ].map((s, i) => (
                 <a
                   key={i}
@@ -336,9 +374,9 @@ export default function LandingPage({
           <div>
             <h4 className="text-[#C6A962] text-xs tracking-widest mb-5 uppercase font-semibold">Contact</h4>
             <div className="space-y-3 text-xs md:text-sm text-[#cccccc] font-light">
-              <p>📍 Dakar, Sénégal</p>
-              <p>📞 +221 77 319 42 79</p>
-              <p>✉️ <a href="mailto:mintymarieme817@gmail.com" className="text-[#C6A962] hover:underline">mintymarieme817@gmail.com</a></p>
+              <p>📍 {content.contactAddress || "Dakar, Sénégal"}</p>
+              <p>📞 {content.contactPhone || "+221 77 319 42 79"}</p>
+              <p>✉️ <a href={`mailto:${content.contactEmail || "mintymarieme817@gmail.com"}`} className="text-[#C6A962] hover:underline">{content.contactEmail || "mintymarieme817@gmail.com"}</a></p>
             </div>
           </div>
           <div>
@@ -346,9 +384,9 @@ export default function LandingPage({
             <p className="text-xs md:text-sm text-[#cccccc] mb-4 font-light">Rejoignez l'aventure sur nos réseaux :</p>
             <div className="flex gap-3">
               {[
-                { icon: "📷", url: "https://www.instagram.com/mintymarieme" },
-                { icon: "👍", url: "https://www.facebook.com/mintymarieme" },
-                { icon: "🎵", url: "https://www.tiktok.com/@mintymarieme" },
+                { icon: "📷", url: content.instagramUrl || "https://www.instagram.com/mintymarieme" },
+                { icon: "👍", url: content.facebookUrl || "https://www.facebook.com/mintymarieme" },
+                { icon: "🎵", url: content.tiktokUrl || "https://www.tiktok.com/@mintymarieme" },
               ].map((s, i) => (
                 <a
                   key={i}

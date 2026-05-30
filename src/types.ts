@@ -19,6 +19,7 @@ export interface Product {
   entretien?: string;
   livraison?: string;
   related_product_ids?: string[];
+  visible?: boolean;
 }
 
 export interface CartItem {
@@ -39,13 +40,48 @@ export interface TestimonialItem {
   text: string;
 }
 
+export interface ReassuranceBlock {
+  title: string;
+  desc: string;
+}
+
 export interface HomepageContent {
   heroBadge: string;
   heroTitle: string;
   heroSubtitle: string;
+  heroCtaText?: string;
+  heroBgUrl?: string;
+  logoText?: string;
+  
+  // Contacts
+  contactPhone?: string;
+  contactSecPhone?: string;
+  contactEmail?: string;
+  contactAddress?: string;
+  whatsappNumber?: string;
+  whatsappMessage?: string;
+  
+  // Socials
+  instagramUrl?: string;
+  facebookUrl?: string;
+  tiktokUrl?: string;
+  
+  // Histoire
   historyTitle: string;
   historySubtitle: string;
   historyText: string;
+  
+  // Reassurance
+  statsClients?: string;
+  statsRating?: string;
+  reassurance1?: ReassuranceBlock;
+  reassurance2?: ReassuranceBlock;
+  reassurance3?: ReassuranceBlock;
+  
+  // SEO
+  seoTitle?: string;
+  seoDescription?: string;
+  
   valeurs: ValeurCard[];
   testimonials: TestimonialItem[];
 }
@@ -61,5 +97,16 @@ export interface Order {
   total: number;
   date: string;
   status: "Nouvelle" | "En préparation" | "Expédiée" | "Livrée";
+}
+
+export interface BlogPost {
+  id: string;
+  title: string;
+  slug: string;
+  summary: string;
+  content: string;
+  imageUrl: string;
+  date: string;
+  visible: boolean;
 }
 

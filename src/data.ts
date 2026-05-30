@@ -228,9 +228,38 @@ export const DEFAULT_HOMEPAGE_CONTENT = {
   heroBadge: "Dakar · Mode Responsable",
   heroTitle: "L'Élégance de la Pudeur,\nl'Héritage d'une Mère.",
   heroSubtitle: "Sublimer sans excès. Valoriser sans exposer. Affirmer sans imposer.",
+  heroCtaText: "Découvrir",
+  heroBgUrl: "https://images.unsplash.com/photo-1445205170230-053b83016050?q=80&w=2000&auto=format&fit=crop",
+  logoText: "MYRIAM VEIL",
+  
+  // Contacts
+  contactPhone: "+221 77 319 42 79",
+  contactSecPhone: "+221 78 123 45 67",
+  contactEmail: "mintymarieme817@gmail.com",
+  contactAddress: "Dakar, Sénégal",
+  whatsappNumber: "+221773194279",
+  whatsappMessage: "Bonjour Maison Myriam Veil, je souhaiterais me renseigner sur vos pièces d'exception.",
+  
+  // Socials
+  instagramUrl: "https://www.instagram.com/mintymarieme",
+  facebookUrl: "https://www.facebook.com/mintymarieme",
+  tiktokUrl: "https://www.tiktok.com/@mintymarieme",
+  
+  // Histoire
   historyTitle: "Une histoire de transmission",
   historySubtitle: "En hommage à Marieme Fall",
   historyText: "Au cœur de MYRIAM VEIL réside une histoire intime et filiale. La marque puise son inspiration dans l'élégance naturelle, la dignité et la force silencieuse de ma mère, Marieme Fall.\n\nCet héritage ne s'adresse pas seulement aux femmes, mais à toute une génération qui souhaite porter ses valeurs à travers son apparence. Chaque création devient ainsi un symbole de transmission, de respect et de prestance.\n\nPorter MYRIAM VEIL, c'est prolonger cette mémoire à travers une allure faite de retenue, de présence et de profondeur.",
+  
+  // Reassurance
+  statsClients: "2 500+",
+  statsRating: "4.9/5",
+  reassurance1: { title: "Livraison Offerte", desc: "Dakar & régions, expédiée sous 24-48 heures dans nos écrins signatures." },
+  reassurance2: { title: "Paiement Sécurisé", desc: "Réglez en toute sérénité en espèces au moment de la livraison à votre domicile." },
+  reassurance3: { title: "Service Premium", desc: "Conseiller dédié disponible 7j/7 pour vous accompagner par WhatsApp." },
+  
+  // SEO
+  seoTitle: "Maison Myriam Veil | L'Élégance de la Pudeur",
+  seoDescription: "Découvrez nos abayas d'exception, pièces de haute couture pudique et joaillerie fine, confectionnées avec intention à Dakar.",
   valeurs: [
     { iconName: "Feather", title: "Pudeur & Élégance", desc: "La modestie est la forme la plus pure du raffinement. Nos créations subliment sans exposer." },
     { iconName: "Leaf", title: "Authenticité", desc: "Ancrage dans les racines culturelles, à travers des pièces emblématiques comme le Meulfeu." },

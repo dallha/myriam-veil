@@ -21,6 +21,9 @@ import CollectionCouture from "./components/CollectionCouture";
 import CollectionEcrin from "./components/CollectionEcrin";
 import CollectionHeritage from "./components/CollectionHeritage";
 import AdminDashboard from "./components/AdminDashboard";
+import JournalHome from "./components/JournalHome";
+import JournalArticle from "./components/JournalArticle";
+import SEO from "./components/SEO";
 import { authService } from "./authService";
 import { dataService } from "./dataService";
 
@@ -31,10 +34,12 @@ export default function App() {
   const {
     appStage,
     currentCollection,
+    currentArticleSlug,
     isCartOpen,
     isMenuOpen,
     setAppStage,
     setCurrentCollection,
+    setCurrentArticleSlug,
     setIsCartOpen,
     setIsMenuOpen,
     selectCollectionLine,
@@ -87,11 +92,69 @@ export default function App() {
   const [loginErrorMessage, setLoginErrorMessage] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
+  // Double Authentification (MFA)
+  const [loginStep, setLoginStep] = useState<"password" | "mfa">("password");
+  const [mfaCode, setMfaCode] = useState("");
+
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isProductModalOpen, setIsProductModalOpen] = useState(false);
   const [productForm, setProductForm] = useState<Partial<Product>>({});
 
-  // Shopping Cart and App State are managed by Zustand stores.
+  // Récupération de la session active Supabase au montage
+  useEffect(() => {
+    const checkActiveSession = async () => {
+      if (!authService.isConfigured()) return;
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error || !session) return;
+
+        // Vérifier le niveau d'assurance (MFA)
+        const { data: aalData, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (aalError) return;
+
+        if (aalData.nextLevel === "aal2" && aalData.currentLevel === "aal1") {
+          // MFA activée mais non vérifiée pour cette session
+          setIsPasswordModalOpen(true);
+          setLoginStep("mfa");
+        } else if (aalData.currentLevel === "aal2" || (aalData.currentLevel === "aal1" && aalData.nextLevel === "aal1")) {
+          // Déjà connecté avec succès (MFA validée ou non activée)
+          setIsAdminMode(true);
+        }
+      } catch (err) {
+        console.error("Erreur de restauration de la session:", err);
+      }
+    };
+    checkActiveSession();
+  }, []);
+
+  // Secret keyboard shortcut to toggle admin portal (Ctrl+Shift+A)
+  // AND URL check for /admin or /administration
+  useEffect(() => {
+    // Check URL
+    if (window.location.pathname === "/admin" || window.location.pathname === "/administration") {
+      if (!isAdminMode) {
+        setIsPasswordModalOpen(true);
+      } else {
+        setIsAdminDashboardOpen(true);
+      }
+      // Remove the path from URL to keep it clean (optional, but good for aesthetics)
+      window.history.replaceState({}, document.title, "/");
+    }
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "a") {
+        e.preventDefault();
+        setIsMenuOpen(false);
+        if (isAdminMode) {
+          setIsAdminDashboardOpen(prev => !prev);
+        } else {
+          setIsPasswordModalOpen(prev => !prev);
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isAdminMode]);
 
   // --- Admin Mode Database Operations ---
   const handleAdminLogin = async () => {
@@ -105,19 +168,64 @@ export default function App() {
     setPasswordError(false);
 
     try {
-      await authService.login(adminEmailInput.trim(), adminPasswordInput);
+      const user = await authService.login(adminEmailInput.trim(), adminPasswordInput);
+      
+      if (user.mfaRequired) {
+        setLoginStep("mfa");
+      } else {
+        setIsAdminMode(true);
+        setIsAdminDashboardOpen(true); // Open full console
+        setIsPasswordModalOpen(false);
+        setLoginStep("password");
+        setAdminEmailInput("");
+        setAdminPasswordInput("");
+      }
+    } catch (err: any) {
+      setPasswordError(true);
+      setLoginErrorMessage(err.message || "Adresse email ou mot de passe incorrect.");
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleMfaVerification = async () => {
+    if (!mfaCode.trim() || mfaCode.trim().length !== 6) {
+      setLoginErrorMessage("Veuillez saisir un code à 6 chiffres.");
+      setPasswordError(true);
+      return;
+    }
+
+    setIsLoggingIn(true);
+    setLoginErrorMessage("");
+    setPasswordError(false);
+
+    try {
+      await authService.verifyMfaLogin(mfaCode.trim());
       setIsAdminMode(true);
-      setIsAdminDashboardOpen(true); // Open full console
+      setIsAdminDashboardOpen(true);
       setIsPasswordModalOpen(false);
       
-      // Clear credentials from RAM
+      // Reset State
+      setLoginStep("password");
+      setMfaCode("");
       setAdminEmailInput("");
       setAdminPasswordInput("");
     } catch (err: any) {
       setPasswordError(true);
-      setLoginErrorMessage(err.message || "Erreur de connexion.");
+      setLoginErrorMessage(err.message || "Code incorrect. Veuillez réessayer.");
     } finally {
       setIsLoggingIn(false);
+    }
+  };
+
+  const handleAdminLogout = async () => {
+    try {
+      await authService.logout();
+    } catch (err) {
+      console.error("Erreur de déconnexion:", err);
+    } finally {
+      setIsAdminMode(false);
+      setIsAdminDashboardOpen(false);
     }
   };
 
@@ -220,6 +328,20 @@ export default function App() {
     setHasUnsavedChanges(true);
   };
 
+  const handleDuplicateProduct = (product: Product) => {
+    const duplicated = { ...product, id: "", name: `${product.name} (Copie)` };
+    setProductForm(duplicated);
+    setEditingProduct(null);
+    setIsProductModalOpen(true);
+  };
+
+  const handleUpdateProductVisibility = (productId: string, visible: boolean) => {
+    setProducts((prev) =>
+      prev.map((p) => (p.id === productId ? { ...p, visible } : p))
+    );
+    setHasUnsavedChanges(true);
+  };
+
   const handleSaveProductForm = () => {
     if (!productForm.name || !productForm.price || !productForm.imageUrl) {
       alert("Veuillez remplir le nom, le prix et l'URL de l'image.");
@@ -254,6 +376,7 @@ export default function App() {
         backgroundAttachment: "fixed"
       }}
     >
+      <SEO title={homepageContent.seoTitle} description={homepageContent.seoDescription} />
 
       {/* 1. BRAND GLOBAL HEADER */}
       <TopAppBar
@@ -270,7 +393,7 @@ export default function App() {
         cartCount={cartCount}
         onToggleCart={() => setIsCartOpen(!isCartOpen)}
         onOpenMenu={() => setIsMenuOpen(true)}
-        brandTitleOverride={appStage === "landing" ? "MYRIAM VEIL" : undefined}
+        brandTitleOverride={appStage === "landing" ? (homepageContent.logoText || "MYRIAM VEIL") : undefined}
       />
 
       {/* 2. ADAPTIVE LINE VIEWPORT ROUTING WITH ANIMATIONS */}
@@ -294,6 +417,17 @@ export default function App() {
                   setHasUnsavedChanges(true);
                 }}
               />
+            </motion.div>
+          ) : appStage === "journal" ? (
+            <motion.div
+              key="journal-view"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.4 }}
+              className="flex-1 w-full"
+            >
+              {currentArticleSlug ? <JournalArticle /> : <JournalHome />}
             </motion.div>
           ) : (
             <motion.div
@@ -468,9 +602,28 @@ export default function App() {
                     En mémoire de Marieme Fall. Abayas de soie et voiles drapés.
                   </p>
                 </button>
+
+                {/* Le Journal */}
+                <button
+                  id="menu-journal-link"
+                  onClick={() => setCurrentArticleSlug(null)}
+                  className={`w-full text-left uppercase group block focus:outline-none ${
+                    appStage === "journal" ? "text-[#b84b14]" : "text-slate-300"
+                  }`}
+                >
+                  <p className="font-display tracking-[0.2em] text-[11px] font-semibold text-slate-500 group-hover:text-[#b84b14] transition-colors">
+                    05 // Le Journal
+                  </p>
+                  <h3 className="font-serif italic text-2xl mt-1 tracking-tight text-white group-hover:translate-x-1.5 transition-transform duration-300">
+                    Journal de Bord
+                  </h3>
+                  <p className="text-[10px] text-slate-400 mt-0.5 normal-case font-light">
+                    Histoires et inspirations de la parfumerie.
+                  </p>
+                </button>
               </div>
 
-              {/* Sidebar footer block Info & Admin entrance */}
+              {/* Sidebar footer block Info */}
               <div className="border-t border-white/10 pt-6 text-[10px] tracking-widest text-[#9C8B89] uppercase font-semibold flex flex-col gap-3 bg-transparent">
                 <div className="flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)] animate-pulse"></span>
@@ -479,23 +632,6 @@ export default function App() {
                 <div className="text-[9px] text-slate-500 font-light normal-case">
                   © {new Date().getFullYear()} @ Maison Myriam Veil. Tous droits réservés.
                 </div>
-                
-                {/* PORTAIL ADMIN Discret Button */}
-                <button
-                  id="menu-admin-portal-btn"
-                  onClick={() => {
-                    setIsMenuOpen(false);
-                    if (isAdminMode) {
-                      setIsAdminMode(false);
-                    } else {
-                      setIsPasswordModalOpen(true);
-                    }
-                  }}
-                  className="w-full mt-4 flex items-center justify-center gap-2 py-3.5 border border-dashed border-white/10 hover:border-blue-500/50 hover:text-blue-400 text-[10px] font-bold uppercase tracking-[0.15em] text-slate-500 transition-colors rounded-sm cursor-pointer"
-                >
-                  <Lock className="w-3.5 h-3.5" />
-                  {isAdminMode ? "Quitter le Portail" : "Portail Maison"}
-                </button>
               </div>
             </nav>
           </div>
@@ -526,6 +662,11 @@ export default function App() {
             onClose={() => setIsAdminDashboardOpen(false)}
             products={products}
             orders={orders}
+            homepageContent={homepageContent}
+            onUpdateHomepageContent={(newContent) => {
+              setHomepageContent(newContent);
+              setHasUnsavedChanges(true);
+            }}
             onAddProduct={(col) => {
               handleOpenAddProduct(col);
               setIsAdminDashboardOpen(false); // Close full console to edit in-place
@@ -534,6 +675,11 @@ export default function App() {
               handleOpenEditProduct(prod);
               setIsAdminDashboardOpen(false); // Close full console to edit in-place
             }}
+            onDuplicateProduct={(prod) => {
+              handleDuplicateProduct(prod);
+              setIsAdminDashboardOpen(false);
+            }}
+            onUpdateProductVisibility={handleUpdateProductVisibility}
             onDeleteProduct={handleDeleteProduct}
             onUpdateOrderStatus={handleUpdateOrderStatus}
             onDeleteOrder={handleDeleteOrder}
@@ -541,6 +687,7 @@ export default function App() {
             onExport={handleExportDb}
             onImport={handleImportDb}
             onReset={handleResetSite}
+            onLogout={handleAdminLogout}
             hasUnsavedChanges={hasUnsavedChanges}
           />
         </>
@@ -559,53 +706,91 @@ export default function App() {
                 setIsPasswordModalOpen(false);
                 setLoginErrorMessage("");
                 setPasswordError(false);
+                setLoginStep("password");
+                setMfaCode("");
               }}
               className="absolute top-4 right-4 text-slate-400 hover:text-white cursor-pointer shadow-sm"
             >
               <X className="w-5 h-5" />
             </button>
             <div className="flex flex-col items-center text-center mt-3 mb-5">
-              <div className="w-12 h-12 bg-blue-500/10 border border-blue-500/30 rounded-full flex items-center justify-center text-blue-400 mb-3 animate-pulse">
-                <Lock className="w-5 h-5" />
-              </div>
-              <h3 className="text-base font-bold uppercase tracking-[0.15em] text-white">Connexion Directeur</h3>
-              <p className="text-[10px] text-slate-400 mt-1 max-w-[260px] leading-relaxed">
-                Connectez-vous à la console d'administration de la Maison.
-              </p>
+              {loginStep === "password" ? (
+                <>
+                  <div className="w-12 h-12 bg-blue-500/10 border border-blue-500/30 rounded-full flex items-center justify-center text-blue-400 mb-3 animate-pulse">
+                    <Lock className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-base font-bold uppercase tracking-[0.15em] text-white">Connexion Directeur</h3>
+                  <p className="text-[10px] text-slate-400 mt-1 max-w-[260px] leading-relaxed">
+                    Connectez-vous à la console d'administration de la Maison.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <div className="w-12 h-12 bg-rose-500/10 border border-rose-500/30 rounded-full flex items-center justify-center text-rose-400 mb-3 animate-pulse">
+                    <Key className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-base font-bold uppercase tracking-[0.15em] text-white">Code de Sécurité</h3>
+                  <p className="text-[10px] text-slate-400 mt-1 max-w-[260px] leading-relaxed">
+                    Saisissez le code à 6 chiffres généré par votre application d'authentification (Google Authenticator, Authy...).
+                  </p>
+                </>
+              )}
             </div>
             
             <div className="space-y-4">
-              {/* Email Input */}
-              <div>
-                <input
-                  type="email"
-                  placeholder="Adresse email"
-                  value={adminEmailInput}
-                  onChange={(e) => setAdminEmailInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleAdminLogin()}
-                  className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none text-xs"
-                  autoFocus
-                />
-              </div>
+              {loginStep === "password" ? (
+                <>
+                  {/* Email Input */}
+                  <div>
+                    <input
+                      type="email"
+                      placeholder="Adresse email"
+                      value={adminEmailInput}
+                      onChange={(e) => setAdminEmailInput(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleAdminLogin()}
+                      className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none text-xs"
+                      autoFocus
+                    />
+                  </div>
 
-              {/* Password Input with view/hide toggle */}
-              <div className="relative">
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Mot de passe"
-                  value={adminPasswordInput}
-                  onChange={(e) => setAdminPasswordInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleAdminLogin()}
-                  className="w-full pl-4 pr-10 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none text-xs font-semibold tracking-wide"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
+                  {/* Password Input with view/hide toggle */}
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Mot de passe"
+                      value={adminPasswordInput}
+                      onChange={(e) => setAdminPasswordInput(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && handleAdminLogin()}
+                      className="w-full pl-4 pr-10 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none text-xs font-semibold tracking-wide"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* MFA OTP Code Input */}
+                  <div>
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      placeholder="Code à 6 chiffres"
+                      value={mfaCode}
+                      onChange={(e) => setMfaCode(e.target.value.replace(/[^0-9]/g, ""))}
+                      onKeyDown={(e) => e.key === "Enter" && handleMfaVerification()}
+                      className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none text-center text-sm font-bold tracking-[0.3em]"
+                      autoFocus
+                    />
+                  </div>
+                </>
+              )}
 
               {/* Status & Error Display */}
               {passwordError && (
@@ -623,20 +808,52 @@ export default function App() {
               )}
 
               {/* Submit trigger button */}
-              <button
-                onClick={handleAdminLogin}
-                disabled={isLoggingIn}
-                className="w-full h-11 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white rounded-lg font-bold text-xs uppercase tracking-[0.15em] cursor-pointer active:scale-95 transition-transform flex items-center justify-center gap-2"
-              >
-                {isLoggingIn ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
-                    <span>Vérification...</span>
-                  </>
-                ) : (
-                  "Se Connecter"
-                )}
-              </button>
+              {loginStep === "password" ? (
+                <button
+                  onClick={handleAdminLogin}
+                  disabled={isLoggingIn}
+                  className="w-full h-11 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white rounded-lg font-bold text-xs uppercase tracking-[0.15em] cursor-pointer active:scale-95 transition-transform flex items-center justify-center gap-2"
+                >
+                  {isLoggingIn ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      <span>Vérification...</span>
+                    </>
+                  ) : (
+                    "Se Connecter"
+                  )}
+                </button>
+              ) : (
+                <>
+                  <button
+                    onClick={handleMfaVerification}
+                    disabled={isLoggingIn}
+                    className="w-full h-11 bg-rose-600 hover:bg-rose-700 disabled:bg-rose-600/50 text-white rounded-lg font-bold text-xs uppercase tracking-[0.15em] cursor-pointer active:scale-95 transition-transform flex items-center justify-center gap-2"
+                  >
+                    {isLoggingIn ? (
+                      <>
+                        <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                        <span>Validation...</span>
+                      </>
+                    ) : (
+                      "Valider le Code"
+                    )}
+                  </button>
+                  
+                  <button
+                    onClick={() => {
+                      setLoginStep("password");
+                      setLoginErrorMessage("");
+                      setPasswordError(false);
+                      setMfaCode("");
+                    }}
+                    className="w-full text-center text-[10px] text-slate-400 hover:text-white font-bold uppercase tracking-widest mt-2 cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <ArrowRight className="w-3.5 h-3.5 rotate-180" />
+                    <span>Retour</span>
+                  </button>
+                </>
+              )}
 
               {/* Supabase connection status indicator */}
               <div className="border-t border-white/5 pt-3 flex justify-center items-center gap-1.5">
@@ -781,6 +998,22 @@ export default function App() {
             </footer>
           </div>
         </div>
+      )}
+
+      {/* Floating WhatsApp contact button */}
+      {!isAdminMode && (
+        <a
+          href={`https://wa.me/${(homepageContent.whatsappNumber || "221773194279").replace(/[^0-9]/g, "")}?text=${encodeURIComponent(homepageContent.whatsappMessage || "Bonjour Maison Myriam Veil, je souhaiterais me renseigner sur vos pièces d'exception.")}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="fixed bottom-6 right-6 z-40 bg-[#25D366] hover:bg-[#20ba5a] text-white p-3.5 rounded-full shadow-[0_4px_20px_rgba(37,211,102,0.4)] transition-all duration-300 active:scale-[0.95] flex items-center justify-center hover:-translate-y-0.5"
+          title="Nous contacter sur WhatsApp"
+          id="whatsapp-floating-btn"
+        >
+          <svg className="w-6 h-6 fill-white" viewBox="0 0 448 512" xmlns="http://www.w3.org/2000/svg">
+            <path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7.9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/>
+          </svg>
+        </a>
       )}
     </div>
   );
