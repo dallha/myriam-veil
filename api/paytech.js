@@ -71,7 +71,7 @@ export default async function handler(req, res) {
   };
 
   try {
-    const paytechResponse = await fetch("https://paytech.sn/api/payment/request-payment", {
+    const paytechResponse = await fetch("https://paytech.sn/api/payment/request-token", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
