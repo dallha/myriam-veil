@@ -76,12 +76,14 @@ FOR EACH ROW EXECUTE FUNCTION public.handle_admin_role_change();
 -- 6. Politiques RLS (Row Level Security)
 
 -- Orders: Les utilisateurs normaux peuvent lire/écrire leurs propres commandes
+DROP POLICY IF EXISTS "Users can manage their own orders" ON public.orders;
 CREATE POLICY "Users can manage their own orders" ON public.orders
 FOR ALL
 USING (auth.uid() = user_id)
 WITH CHECK (auth.uid() = user_id);
 
 -- Orders: Les administrateurs peuvent tout voir/modifier
+DROP POLICY IF EXISTS "Admins can manage all orders" ON public.orders;
 CREATE POLICY "Admins can manage all orders" ON public.orders
 FOR ALL
 USING (
@@ -92,10 +94,12 @@ WITH CHECK (
 );
 
 -- Products: Les produits sont visibles par tout le monde
+DROP POLICY IF EXISTS "Products are publicly visible" ON public.products;
 CREATE POLICY "Products are publicly visible" ON public.products
 FOR SELECT USING (true);
 
 -- Products: Les administrateurs et éditeurs peuvent modifier les produits
+DROP POLICY IF EXISTS "Admins can modify products" ON public.products;
 CREATE POLICY "Admins can modify products" ON public.products
 FOR ALL
 USING (
@@ -120,3 +124,102 @@ SELECT cron.schedule(
       AND last_sign_in_at < NOW() - INTERVAL '30 days';
     $$
 );
+
+-- ==============================================================================
+-- 9. Auto-assignation du rôle admin au premier utilisateur
+-- ==============================================================================
+
+-- Fonction utilitaire pour assigner un rôle à un utilisateur par email
+CREATE OR REPLACE FUNCTION public.assign_admin_role(
+    target_email TEXT,
+    target_role TEXT DEFAULT 'editor'
+)
+RETURNS TEXT AS $$
+DECLARE
+    target_user_id UUID;
+    existing_role TEXT;
+BEGIN
+    IF target_role NOT IN ('super_admin', 'editor', 'logistician') THEN
+        RETURN 'ERREUR: Rôle invalide. Utilisez super_admin, editor, ou logistician.';
+    END IF;
+
+    SELECT id INTO target_user_id
+    FROM auth.users
+    WHERE email = target_email;
+
+    IF target_user_id IS NULL THEN
+        RETURN 'ERREUR: Aucun utilisateur trouvé avec cet email.';
+    END IF;
+
+    SELECT role INTO existing_role
+    FROM public.admin_roles
+    WHERE user_id = target_user_id;
+
+    IF existing_role IS NOT NULL THEN
+        UPDATE public.admin_roles
+        SET role = target_role, approved_at = NOW()
+        WHERE user_id = target_user_id;
+        RETURN 'SUCCÈS: Rôle de ' || target_email || ' mis à jour en ' || target_role || '.';
+    ELSE
+        INSERT INTO public.admin_roles (user_id, role)
+        VALUES (target_user_id, target_role);
+        RETURN 'SUCCÈS: Rôle ' || target_role || ' assigné à ' || target_email || '.';
+    END IF;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Trigger: quand un nouvel utilisateur est créé, si c'est le premier, il devient super_admin
+CREATE OR REPLACE FUNCTION public.handle_new_user_auto_admin()
+RETURNS TRIGGER AS $$
+DECLARE
+    admin_count INTEGER;
+BEGIN
+    SELECT COUNT(*) INTO admin_count FROM public.admin_roles;
+    
+    IF admin_count = 0 THEN
+        INSERT INTO public.admin_roles (user_id, role)
+        VALUES (NEW.id, 'super_admin');
+        RAISE LOG 'Auto-admin: Premier utilisateur % promu super_admin', NEW.email;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+AFTER INSERT ON auth.users
+FOR EACH ROW
+EXECUTE FUNCTION public.handle_new_user_auto_admin();
+
+-- Politique RLS pour que les admins puissent voir admin_roles
+DROP POLICY IF EXISTS "Admins can view admin_roles" ON public.admin_roles;
+CREATE POLICY "Admins can view admin_roles" ON public.admin_roles
+FOR SELECT
+USING (
+    auth.uid() = user_id OR
+    (auth.jwt() -> 'app_metadata' ->> 'user_role') IN ('super_admin', 'editor', 'logistician')
+);
+
+-- Backfill: promouvoir le premier utilisateur existant si aucun admin n'existe
+DO $$
+DECLARE
+    admin_count INTEGER;
+    first_user RECORD;
+BEGIN
+    SELECT COUNT(*) INTO admin_count FROM public.admin_roles;
+    
+    IF admin_count = 0 THEN
+        SELECT id, email INTO first_user
+        FROM auth.users
+        ORDER BY created_at ASC
+        LIMIT 1;
+        
+        IF first_user.id IS NOT NULL THEN
+            INSERT INTO public.admin_roles (user_id, role)
+            VALUES (first_user.id, 'super_admin');
+            RAISE LOG 'Auto-admin: Utilisateur existant % promu super_admin', first_user.email;
+        END IF;
+    END IF;
+END;
+$$;

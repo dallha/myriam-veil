@@ -14,10 +14,12 @@ CREATE TABLE IF NOT EXISTS public.settings (
 ALTER TABLE public.settings ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Tout le monde peut lire les settings (contenu public)
+DROP POLICY IF EXISTS "Settings are publicly readable" ON public.settings;
 CREATE POLICY "Settings are publicly readable" ON public.settings
 FOR SELECT USING (true);
 
 -- Policy: Les admins peuvent modifier les settings
+DROP POLICY IF EXISTS "Admins can modify settings" ON public.settings;
 CREATE POLICY "Admins can modify settings" ON public.settings
 FOR ALL
 USING (

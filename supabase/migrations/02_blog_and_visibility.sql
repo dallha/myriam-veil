@@ -22,10 +22,12 @@ CREATE TABLE IF NOT EXISTS public.blog_posts (
 ALTER TABLE public.blog_posts ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Les articles visibles sont publics
+DROP POLICY IF EXISTS "Visible blog posts are public" ON public.blog_posts;
 CREATE POLICY "Visible blog posts are public" ON public.blog_posts
 FOR SELECT USING (visible = true);
 
 -- Policy: Les admins peuvent tout voir et modifier
+DROP POLICY IF EXISTS "Admins can manage blog posts" ON public.blog_posts;
 CREATE POLICY "Admins can manage blog posts" ON public.blog_posts
 FOR ALL
 USING (

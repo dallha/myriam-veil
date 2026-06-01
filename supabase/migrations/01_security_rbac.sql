@@ -44,12 +44,14 @@ ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 
 -- Create policy for Orders
 -- Policy: User can read/write their own orders
+DROP POLICY IF EXISTS "Users can manage their own orders" ON public.orders;
 CREATE POLICY "Users can manage their own orders" ON public.orders
 FOR ALL
 USING (auth.uid() = user_id)
 WITH CHECK (auth.uid() = user_id);
 
 -- Policy: Super Admin & Logistician can read/write all orders
+DROP POLICY IF EXISTS "Admins can manage all orders" ON public.orders;
 CREATE POLICY "Admins can manage all orders" ON public.orders
 FOR ALL
 USING (
@@ -63,10 +65,12 @@ WITH CHECK (
 ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Everyone can read products
+DROP POLICY IF EXISTS "Products are publicly visible" ON public.products;
 CREATE POLICY "Products are publicly visible" ON public.products
 FOR SELECT USING (true);
 
 -- Policy: Super Admin & Editor can modify products
+DROP POLICY IF EXISTS "Admins can modify products" ON public.products;
 CREATE POLICY "Admins can modify products" ON public.products
 FOR ALL
 USING (
