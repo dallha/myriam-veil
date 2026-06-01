@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import { CollectionId, Product, CartItem, HomepageContent, Order } from "./types";
 import { PRODUCTS, DEFAULT_HOMEPAGE_CONTENT } from "./data";
 import { 
@@ -17,18 +17,33 @@ import BottomNav from "./components/BottomNav";
 import UniversalCart from "./components/UniversalCart";
 import LandingPage from "./components/LandingPage";
 import OrigineEntry from "./components/OrigineEntry";
-import CollectionCouture from "./components/CollectionCouture";
-import CollectionEcrin from "./components/CollectionEcrin";
-import CollectionHeritage from "./components/CollectionHeritage";
-import AdminDashboard from "./components/AdminDashboard";
-import JournalHome from "./components/JournalHome";
-import JournalArticle from "./components/JournalArticle";
 import SEO from "./components/SEO";
 import { authService } from "./authService";
 import { dataService } from "./dataService";
+import { supabase } from "./lib/supabase";
+import { emailService } from "./lib/emailService";
+import { analytics } from "./lib/analytics";
 
 import { useCartStore } from "./store/useCartStore";
 import { useAppStore } from "./store/useAppStore";
+
+// Lazy-loaded components for code splitting
+const CollectionCouture = lazy(() => import("./components/CollectionCouture"));
+const CollectionEcrin = lazy(() => import("./components/CollectionEcrin"));
+const CollectionHeritage = lazy(() => import("./components/CollectionHeritage"));
+const AdminDashboard = lazy(() => import("./components/AdminDashboard"));
+const JournalHome = lazy(() => import("./components/JournalHome"));
+const JournalArticle = lazy(() => import("./components/JournalArticle"));
+
+// Loading fallback component
+const CollectionFallback = () => (
+  <div className="flex items-center justify-center min-h-[60vh]">
+    <div className="flex flex-col items-center gap-4">
+      <div className="w-10 h-10 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+      <p className="text-xs text-slate-500 uppercase tracking-widest">Chargement...</p>
+    </div>
+  </div>
+);
 
 export default function App() {
   const {
@@ -272,10 +287,10 @@ export default function App() {
     }
   };
 
-  const handleSaveAll = () => {
-    localStorage.setItem("myriam_veil_products", JSON.stringify(products));
-    localStorage.setItem("myriam_veil_homepage", JSON.stringify(homepageContent));
-    localStorage.setItem("myriam_veil_orders", JSON.stringify(orders));
+  const handleSaveAll = async () => {
+    await dataService.saveProducts(products);
+    await dataService.saveHomepageContent(homepageContent);
+    await dataService.saveOrders(orders);
     setHasUnsavedChanges(false);
   };
 
@@ -327,6 +342,22 @@ export default function App() {
 
   const handlePlaceOrder = (newOrder: Order) => {
     setOrders((prev) => [newOrder, ...prev]);
+    
+    // Track analytics
+    analytics.track("order_placed", {
+      orderId: newOrder.id,
+      total: newOrder.total,
+      itemCount: newOrder.items.length,
+    });
+
+    // Send confirmation email (async, non-blocking)
+    emailService.sendOrderConfirmation(newOrder).then((result) => {
+      if (result.success) {
+        console.log(`[Email] Confirmation envoyée pour la commande #${newOrder.id}`);
+      } else {
+        console.warn(`[Email] Échec d'envoi de confirmation pour #${newOrder.id}:`, result.error);
+      }
+    });
   };
 
   const handleUpdateOrderStatus = (orderId: string, status: Order["status"]) => {
@@ -334,6 +365,21 @@ export default function App() {
       prev.map((o) => (o.id === orderId ? { ...o, status } : o))
     );
     setHasUnsavedChanges(true);
+
+    // Track analytics
+    analytics.track("order_status_update", { orderId, status });
+
+    // Send status update email (async, non-blocking)
+    const order = orders.find((o) => o.id === orderId);
+    if (order) {
+      emailService.sendOrderStatusUpdate({ ...order, status }).then((result) => {
+        if (result.success) {
+          console.log(`[Email] Mise à jour de statut envoyée pour #${orderId} → ${status}`);
+        } else {
+          console.warn(`[Email] Échec d'envoi de mise à jour pour #${orderId}:`, result.error);
+        }
+      });
+    }
   };
 
   const handleDeleteOrder = (orderId: string) => {
@@ -470,7 +516,9 @@ export default function App() {
               transition={{ duration: 0.4 }}
               className="flex-1 w-full"
             >
-              {currentArticleSlug ? <JournalArticle /> : <JournalHome />}
+              <Suspense fallback={<CollectionFallback />}>
+                {currentArticleSlug ? <JournalArticle /> : <JournalHome />}
+              </Suspense>
             </motion.div>
           ) : (
             <motion.div
@@ -485,40 +533,42 @@ export default function App() {
                 <OrigineEntry onSelectCollection={selectCollectionLine} />
               )}
 
-              {currentCollection === "couture" && (
-                <CollectionCouture
-                  products={products.filter((p) => p.collectionId === "couture")}
-                  onAddToCart={handleAddToCart}
-                  isAdminMode={isAdminMode}
-                  onEditProduct={handleOpenEditProduct}
-                  onDeleteProduct={handleDeleteProduct}
-                  onAddProduct={handleOpenAddProduct}
-                  onProductDetailToggle={(isOpen) => setIsProductDetailOpen(isOpen)}
-                />
-              )}
+              <Suspense fallback={<CollectionFallback />}>
+                {currentCollection === "couture" && (
+                  <CollectionCouture
+                    products={products.filter((p) => p.collectionId === "couture")}
+                    onAddToCart={handleAddToCart}
+                    isAdminMode={isAdminMode}
+                    onEditProduct={handleOpenEditProduct}
+                    onDeleteProduct={handleDeleteProduct}
+                    onAddProduct={handleOpenAddProduct}
+                    onProductDetailToggle={(isOpen) => setIsProductDetailOpen(isOpen)}
+                  />
+                )}
 
-              {currentCollection === "ecrin" && (
-                <CollectionEcrin
-                  products={products.filter((p) => p.collectionId === "ecrin")}
-                  onAddToCart={handleAddToCart}
-                  isAdminMode={isAdminMode}
-                  onEditProduct={handleOpenEditProduct}
-                  onDeleteProduct={handleDeleteProduct}
-                  onAddProduct={handleOpenAddProduct}
-                  onProductDetailToggle={(isOpen) => setIsProductDetailOpen(isOpen)}
-                />
-              )}
+                {currentCollection === "ecrin" && (
+                  <CollectionEcrin
+                    products={products.filter((p) => p.collectionId === "ecrin")}
+                    onAddToCart={handleAddToCart}
+                    isAdminMode={isAdminMode}
+                    onEditProduct={handleOpenEditProduct}
+                    onDeleteProduct={handleDeleteProduct}
+                    onAddProduct={handleOpenAddProduct}
+                    onProductDetailToggle={(isOpen) => setIsProductDetailOpen(isOpen)}
+                  />
+                )}
 
-              {currentCollection === "heritage" && (
-                <CollectionHeritage
-                  products={products.filter((p) => p.collectionId === "heritage")}
-                  onAddToCart={handleAddToCart}
-                  isAdminMode={isAdminMode}
-                  onEditProduct={handleOpenEditProduct}
-                  onDeleteProduct={handleDeleteProduct}
-                  onAddProduct={handleOpenAddProduct}
-                />
-              )}
+                {currentCollection === "heritage" && (
+                  <CollectionHeritage
+                    products={products.filter((p) => p.collectionId === "heritage")}
+                    onAddToCart={handleAddToCart}
+                    isAdminMode={isAdminMode}
+                    onEditProduct={handleOpenEditProduct}
+                    onDeleteProduct={handleDeleteProduct}
+                    onAddProduct={handleOpenAddProduct}
+                  />
+                )}
+              </Suspense>
             </motion.div>
           )}
         </AnimatePresence>

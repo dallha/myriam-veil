@@ -1609,7 +1609,7 @@ export default function AdminDashboard({
                   <div className="p-6 border border-white/15 bg-white/[0.01] rounded-2xl space-y-4 backdrop-blur-md relative overflow-hidden md:col-span-2">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-amber-600/5 rounded-full blur-[40px]"></div>
                     <h4 className="text-xs font-bold uppercase tracking-wider text-white border-b border-white/5 pb-2 flex items-center gap-2">
-                      <Star className="w-4 h-4 text-amber-400" /> Réassurance & Confiance
+                      <CheckCircle className="w-4 h-4 text-amber-400" /> Réassurance & Confiance
                     </h4>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

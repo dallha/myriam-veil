@@ -91,6 +91,7 @@ export interface Order {
   id: string;
   customerName: string;
   customerPhone: string;
+  customerEmail?: string;
   customerAddress: string;
   deliveryOption: "dakar" | "hors-dakar";
   items: CartItem[];

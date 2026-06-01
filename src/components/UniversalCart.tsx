@@ -81,7 +81,7 @@ export default function UniversalCart({
       date: dateStr,
       status: "Nouvelle",
       paymentMethod,
-      paymentStatus: paymentMethod === "online" ? "Non payé" : "À la livraison"
+      paymentStatus: paymentMethod === "online" ? "Échoué" : "À la livraison"
     };
 
     if (paymentMethod === "online") {
