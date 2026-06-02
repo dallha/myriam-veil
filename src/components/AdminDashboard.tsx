@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { Product, Order, HomepageContent } from "../types";
+import { Product, Order, HomepageContent, BlogPost } from "../types";
 import { 
   X, LayoutDashboard, ShoppingBag, Package, Database, 
   TrendingUp, CheckCircle, Clock, Truck, Trash2, Plus, 
@@ -1148,23 +1148,7 @@ export default function AdminDashboard({
             {/* =================== TAB 6: JOURNAL ===================== */}
             {/* ======================================================== */}
             {activeTab === "journal" && (
-              <div className="space-y-6 max-w-xl mx-auto py-4">
-                <div className="text-center p-8 border border-white/10 bg-white/[0.01] rounded-2xl flex flex-col items-center justify-center">
-                  <BookOpen className="w-12 h-12 text-orange-400 mb-4 stroke-[1.5]" />
-                  <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-2">Module Journal SEO (Actif)</h3>
-                  <p className="text-xs text-slate-400 mb-6 max-w-md mx-auto leading-relaxed">
-                    Le module Journal de Bord (Blog SEO) est accessible directement depuis l'interface client. Pour rédiger, publier ou supprimer des articles, rendez-vous sur la page Journal de la boutique en tant qu'administrateur.
-                  </p>
-                  <button
-                    onClick={() => {
-                      onClose();
-                    }}
-                    className="flex items-center justify-center gap-2 px-6 py-3 bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 border border-orange-500/30 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
-                  >
-                    Aller au Journal
-                  </button>
-                </div>
-              </div>
+              <JournalTabContent onClose={onClose} />
             )}
 
             {/* ======================================================== */}
@@ -2127,6 +2111,531 @@ function UsersTabContent() {
           <span>
             Les rôles sont stockés dans la table <code className="text-cyan-400 font-mono">admin_roles</code> de Supabase.
             Les utilisateurs doivent se déconnecter et se reconnecter pour que leur nouveau rôle soit pris en compte dans le JWT.
+          </span>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ================================================================
+// JOURNAL TAB COMPONENT — Gestion complète des articles de blog
+// ================================================================
+interface JournalTabContentProps {
+  onClose: () => void;
+}
+
+function JournalTabContent({ onClose }: JournalTabContentProps) {
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Éditeur d'article
+  const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
+  const [isEditorOpen, setIsEditorOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  // Formulaire d'article
+  const [formTitle, setFormTitle] = useState("");
+  const [formSlug, setFormSlug] = useState("");
+  const [formSummary, setFormSummary] = useState("");
+  const [formContent, setFormContent] = useState("");
+  const [formImageUrl, setFormImageUrl] = useState("");
+  const [formDate, setFormDate] = useState("");
+  const [formVisible, setFormVisible] = useState(true);
+
+  const loadPosts = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      if (isSupabaseConfigured()) {
+        const { data, error } = await supabase
+          .from("blog_posts")
+          .select("*")
+          .order("date", { ascending: false });
+        if (error) throw error;
+        setPosts((data as BlogPost[]) || []);
+      } else {
+        // Fallback localStorage
+        const stored = localStorage.getItem("myriam_veil_journal");
+        if (stored) {
+          setPosts(JSON.parse(stored));
+        } else {
+          setPosts([]);
+        }
+      }
+    } catch (err: any) {
+      setError(err.message || "Erreur lors du chargement des articles.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPosts();
+  }, []);
+
+  const savePosts = async (updatedPosts: BlogPost[]) => {
+    if (isSupabaseConfigured()) {
+      // On sauvegarde dans Supabase
+      for (const post of updatedPosts) {
+        const { error } = await supabase
+          .from("blog_posts")
+          .upsert(post, { onConflict: "id" });
+        if (error) throw error;
+      }
+    }
+    // Toujours sauvegarder en localStorage pour fallback
+    localStorage.setItem("myriam_veil_journal", JSON.stringify(updatedPosts));
+  };
+
+  const openNewPost = () => {
+    setEditingPost(null);
+    setFormTitle("");
+    setFormSlug("");
+    setFormSummary("");
+    setFormContent("");
+    setFormImageUrl("https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&q=80");
+    setFormDate(new Date().toISOString().split("T")[0]);
+    setFormVisible(true);
+    setIsEditorOpen(true);
+  };
+
+  const openEditPost = (post: BlogPost) => {
+    setEditingPost(post);
+    setFormTitle(post.title);
+    setFormSlug(post.slug);
+    setFormSummary(post.summary);
+    setFormContent(post.content);
+    setFormImageUrl(post.imageUrl);
+    setFormDate(post.date);
+    setFormVisible(post.visible);
+    setIsEditorOpen(true);
+  };
+
+  const handleSavePost = async () => {
+    if (!formTitle.trim() || !formSlug.trim()) {
+      setError("Le titre et le slug sont obligatoires.");
+      return;
+    }
+    setSaving(true);
+    setError("");
+    setSuccess("");
+    try {
+      const now = new Date().toISOString();
+      const post: BlogPost = {
+        id: editingPost?.id || crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+        title: formTitle.trim(),
+        slug: formSlug.trim().toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-"),
+        summary: formSummary.trim(),
+        content: formContent,
+        imageUrl: formImageUrl.trim() || "https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&q=80",
+        date: formDate || now.split("T")[0],
+        visible: formVisible,
+      };
+
+      let updatedPosts: BlogPost[];
+      if (editingPost) {
+        updatedPosts = posts.map(p => p.id === editingPost.id ? post : p);
+      } else {
+        updatedPosts = [post, ...posts];
+      }
+
+      await savePosts(updatedPosts);
+      setPosts(updatedPosts);
+      setSuccess(editingPost ? "✓ Article modifié avec succès !" : "✓ Nouvel article publié !");
+      setIsEditorOpen(false);
+      setEditingPost(null);
+    } catch (err: any) {
+      setError(err.message || "Erreur lors de la sauvegarde.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeletePost = async (post: BlogPost) => {
+    if (!window.confirm(`Supprimer définitivement l'article "${post.title}" ?`)) return;
+    setError("");
+    setSuccess("");
+    try {
+      if (isSupabaseConfigured()) {
+        const { error } = await supabase
+          .from("blog_posts")
+          .delete()
+          .eq("id", post.id);
+        if (error) throw error;
+      }
+      const updatedPosts = posts.filter(p => p.id !== post.id);
+      localStorage.setItem("myriam_veil_journal", JSON.stringify(updatedPosts));
+      setPosts(updatedPosts);
+      setSuccess(`✓ Article "${post.title}" supprimé.`);
+    } catch (err: any) {
+      setError(err.message || "Erreur lors de la suppression.");
+    }
+  };
+
+  const handleToggleVisibility = async (post: BlogPost) => {
+    setError("");
+    setSuccess("");
+    try {
+      const updated = { ...post, visible: !post.visible };
+      const updatedPosts = posts.map(p => p.id === post.id ? updated : p);
+      await savePosts(updatedPosts);
+      setPosts(updatedPosts);
+      setSuccess(updated.visible ? `✓ Article "${post.title}" publié.` : `✓ Article "${post.title}" masqué.`);
+    } catch (err: any) {
+      setError(err.message || "Erreur lors du changement de visibilité.");
+    }
+  };
+
+  const generateSlug = (title: string) => {
+    setFormSlug(
+      title.toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .trim()
+    );
+  };
+
+  const filteredPosts = posts.filter(p =>
+    p.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    p.summary.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const visibleCount = posts.filter(p => p.visible).length;
+
+  return (
+    <div className="space-y-6 max-w-6xl mx-auto py-4 font-sans text-slate-300">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-orange-500/10 border border-orange-500/30 rounded-full flex items-center justify-center text-orange-400">
+            <BookOpen className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Journal SEO & Blog</h3>
+            <p className="text-[9px] text-slate-500 uppercase tracking-widest font-mono mt-0.5">
+              {posts.length} article{posts.length > 1 ? "s" : ""} · {visibleCount} publié{visibleCount > 1 ? "s" : ""} · {posts.length - visibleCount} masqué{posts.length - visibleCount > 1 ? "s" : ""}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input
+              type="text"
+              placeholder="Rechercher un article..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 pr-3 py-2 rounded-lg border border-white/10 bg-white/5 text-xs text-white focus:border-orange-500 focus:outline-none placeholder:text-slate-500 w-48"
+            />
+          </div>
+          <button
+            onClick={openNewPost}
+            className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+          >
+            <Plus className="w-3.5 h-3.5" /> Nouvel article
+          </button>
+          <button
+            onClick={loadPosts}
+            className="p-2 border border-white/10 hover:border-white/20 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
+            title="Rafraîchir"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+          <button
+            onClick={onClose}
+            className="p-2 border border-white/10 hover:border-white/20 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
+            title="Voir le journal public"
+          >
+            <Eye className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Notifications */}
+      {error && (
+        <div className="flex items-center gap-2.5 text-xs text-red-400 bg-red-500/10 border border-red-500/20 py-3 px-4 rounded-xl">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+      {success && (
+        <div className="flex items-center gap-2.5 text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 py-3 px-4 rounded-xl">
+          <CheckCircle className="w-4 h-4 shrink-0 animate-pulse" />
+          <span>{success}</span>
+        </div>
+      )}
+
+      {/* Éditeur d'article */}
+      {isEditorOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-[#02040a] text-slate-300 max-w-3xl w-full rounded-2xl shadow-2xl border border-white/10 p-6 relative flex flex-col font-sans max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setIsEditorOpen(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white cursor-pointer z-10"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex items-center gap-3 mb-6 mt-2">
+              <div className="w-10 h-10 bg-orange-500/10 border border-orange-500/30 rounded-full flex items-center justify-center text-orange-400">
+                <BookOpen className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                  {editingPost ? "Modifier l'article" : "Nouvel article"}
+                </h3>
+                <p className="text-[9px] text-slate-500 uppercase tracking-widest font-mono mt-0.5">
+                  Rédigez et publiez un article de blog
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {/* Titre */}
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Titre de l'article *</label>
+                <input
+                  type="text"
+                  placeholder="Ex: L'Art de la Parfumerie Orientale"
+                  value={formTitle}
+                  onChange={(e) => {
+                    setFormTitle(e.target.value);
+                    if (!editingPost) generateSlug(e.target.value);
+                  }}
+                  className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-orange-500 focus:outline-none text-sm"
+                  autoFocus
+                />
+              </div>
+
+              {/* Slug + Date */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Slug (URL) *</label>
+                  <input
+                    type="text"
+                    placeholder="l-art-de-la-parfumerie"
+                    value={formSlug}
+                    onChange={(e) => setFormSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-").replace(/-+/g, "-"))}
+                    className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-orange-500 focus:outline-none text-xs font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Date de publication</label>
+                  <input
+                    type="date"
+                    value={formDate}
+                    onChange={(e) => setFormDate(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-orange-500 focus:outline-none text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* Image URL */}
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">URL de l'image de couverture</label>
+                <input
+                  type="text"
+                  placeholder="https://images.unsplash.com/..."
+                  value={formImageUrl}
+                  onChange={(e) => setFormImageUrl(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-orange-500 focus:outline-none text-xs"
+                />
+                {formImageUrl && (
+                  <div className="mt-2 w-full h-32 rounded-lg overflow-hidden border border-white/10">
+                    <img src={formImageUrl} alt="Preview" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                  </div>
+                )}
+              </div>
+
+              {/* Résumé */}
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Résumé / Accroche</label>
+                <textarea
+                  rows={2}
+                  placeholder="Un court résumé qui apparaîtra dans la carte de l'article..."
+                  value={formSummary}
+                  onChange={(e) => setFormSummary(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-orange-500 focus:outline-none text-xs"
+                />
+              </div>
+
+              {/* Contenu HTML */}
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Contenu (HTML)</label>
+                <textarea
+                  rows={12}
+                  placeholder="<p>Contenu de l'article en HTML...</p>"
+                  value={formContent}
+                  onChange={(e) => setFormContent(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-orange-500 focus:outline-none text-xs font-mono leading-relaxed"
+                />
+                <p className="text-[9px] text-slate-500 mt-1">
+                  Vous pouvez utiliser du HTML pour formater votre article (titres, paragraphes, images, etc.)
+                </p>
+              </div>
+
+              {/* Visibilité */}
+              <div className="flex items-center gap-3 py-2">
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={formVisible}
+                    onChange={(e) => setFormVisible(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-orange-600"></div>
+                </label>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  {formVisible ? "Publié (visible sur le site)" : "Masqué (brouillon)"}
+                </span>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-4 border-t border-white/10">
+                <button
+                  onClick={() => setIsEditorOpen(false)}
+                  className="px-5 py-2.5 border border-white/10 hover:bg-white/5 text-slate-300 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                >
+                  Annuler
+                </button>
+                <button
+                  onClick={handleSavePost}
+                  disabled={saving}
+                  className="flex-1 bg-orange-600 hover:bg-orange-700 disabled:bg-orange-600/50 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer flex items-center justify-center gap-2 py-2.5"
+                >
+                  {saving ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                      Sauvegarde...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      {editingPost ? "Enregistrer les modifications" : "Publier l'article"}
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Liste des articles */}
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-16">
+          <span className="w-8 h-8 border-3 border-orange-500 border-t-transparent rounded-full animate-spin mb-4"></span>
+          <span className="text-xs uppercase font-mono tracking-widest text-slate-500">Chargement des articles...</span>
+        </div>
+      ) : filteredPosts.length === 0 ? (
+        <div className="p-12 border border-dashed border-white/10 rounded-2xl text-center flex flex-col items-center justify-center bg-white/[0.005]">
+          <BookOpen className="w-10 h-10 mb-4 text-slate-600 stroke-[1.2]" />
+          <p className="text-sm font-bold uppercase tracking-wider text-white">
+            {searchQuery ? "Aucun article trouvé" : "Aucun article de blog"}
+          </p>
+          <p className="text-xs text-slate-500 mt-1">
+            {searchQuery ? "Essayez un autre terme de recherche." : "Cliquez sur 'Nouvel article' pour créer votre premier article de blog."}
+          </p>
+          {!searchQuery && (
+            <button
+              onClick={openNewPost}
+              className="mt-6 flex items-center gap-2 px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+            >
+              <Plus className="w-4 h-4" /> Créer le premier article
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredPosts.map((post, index) => (
+            <motion.div
+              key={post.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.05, duration: 0.3 }}
+              className={`border rounded-xl overflow-hidden bg-white/[0.01] hover:bg-white/[0.03] backdrop-blur-sm transition-all flex flex-col ${
+                post.visible ? 'border-white/10 hover:border-white/20' : 'border-white/5 opacity-60'
+              }`}
+            >
+              {/* Image */}
+              <div className="h-40 overflow-hidden relative">
+                <img
+                  src={post.imageUrl}
+                  alt={post.title}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1596462502278-27bfdc403348?auto=format&fit=crop&q=80';
+                  }}
+                />
+                <div className="absolute top-2 right-2 flex gap-1.5">
+                  {!post.visible && (
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-400 text-[8px] font-bold uppercase tracking-wider">
+                      Brouillon
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-4 flex flex-col flex-1">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-[9px] text-slate-500 font-mono">{post.date}</span>
+                  {post.visible ? (
+                    <span className="text-[8px] text-emerald-400 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span> Publié
+                    </span>
+                  ) : (
+                    <span className="text-[8px] text-amber-400 flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span> Masqué
+                    </span>
+                  )}
+                </div>
+
+                <h4 className="text-sm font-bold text-white mb-2 line-clamp-2">{post.title}</h4>
+                <p className="text-[10px] text-slate-400 leading-relaxed line-clamp-2 flex-1 mb-3">
+                  {post.summary}
+                </p>
+
+                <div className="flex items-center gap-2 pt-3 border-t border-white/5">
+                  <button
+                    onClick={() => openEditPost(post)}
+                    className="flex-1 flex items-center justify-center gap-1 py-1.5 border border-white/10 hover:border-white/20 text-slate-300 rounded text-[9px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                  >
+                    <Edit className="w-3 h-3" /> Modifier
+                  </button>
+                  <button
+                    onClick={() => handleToggleVisibility(post)}
+                    className="flex items-center justify-center gap-1 py-1.5 px-2.5 border border-white/10 hover:border-white/20 text-slate-400 rounded transition-colors cursor-pointer"
+                    title={post.visible ? "Masquer" : "Publier"}
+                  >
+                    {post.visible ? <Eye className="w-3 h-3" /> : <Eye className="w-3 h-3 text-emerald-400" />}
+                  </button>
+                  <button
+                    onClick={() => handleDeletePost(post)}
+                    className="flex items-center justify-center py-1.5 px-2.5 border border-white/10 hover:border-red-500/30 hover:text-red-400 rounded transition-colors cursor-pointer"
+                    title="Supprimer"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
+
+      {/* Info box */}
+      <div className="p-4 border border-white/5 bg-white/[0.005] rounded-xl text-[10px] text-slate-500 leading-relaxed">
+        <p className="flex items-center gap-1.5">
+          <BookOpen className="w-3.5 h-3.5 text-orange-400 shrink-0" />
+          <span>
+            Les articles sont stockés dans Supabase (table <code className="text-orange-400 font-mono">blog_posts</code>) et en localStorage pour fallback.
+            Utilisez le bouton <strong className="text-orange-400">"Nouvel article"</strong> pour créer du contenu SEO optimisé.
           </span>
         </p>
       </div>
