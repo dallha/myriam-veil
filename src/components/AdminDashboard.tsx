@@ -2107,11 +2107,22 @@ function DatabaseTabContent({ products, orders, onExport, onImport, onReset }: D
           const { count, error } = await supabase
             .from(table)
             .select("*", { count: "exact", head: true });
-          if (error) throw error;
-          setTableStats(prev => ({
-            ...prev,
-            [table]: { count: count || 0, loading: false, error: "" }
-          }));
+          if (error) {
+            // Ignorer les erreurs de table manquante (PGRST116 = relation does not exist)
+            if (error.code === "PGRST116" || error.message?.includes("does not exist") || error.message?.includes("relation")) {
+              setTableStats(prev => ({
+                ...prev,
+                [table]: { count: 0, loading: false, error: "" }
+              }));
+            } else {
+              throw error;
+            }
+          } else {
+            setTableStats(prev => ({
+              ...prev,
+              [table]: { count: count || 0, loading: false, error: "" }
+            }));
+          }
         } catch (err: any) {
           setTableStats(prev => ({
             ...prev,
