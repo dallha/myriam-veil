@@ -620,6 +620,582 @@ export default function App() {
                 )}
               </AnimatePresence>
             </main>
+
+            {/* 3. UNIVERSAL FLOATING NAV PILL */}
+            {appStage === "collections" && !isProductDetailOpen && (
+              <BottomNav
+                currentCollection={currentCollection}
+                onSetCollection={selectCollectionLine}
+                onToggleCart={() => setIsCartOpen(!isCartOpen)}
+                cartCount={cartCount}
+              />
+            )}
+
+            {/* 4. HIGH FIDELITY CART DRAWER */}
+            <UniversalCart
+              isOpen={isCartOpen}
+              onClose={() => setIsCartOpen(false)}
+              cartItems={cartItems}
+              onUpdateQuantity={handleUpdateQuantity}
+              onRemoveItem={handleRemoveItem}
+              onClearCart={handleClearCart}
+              onPlaceOrder={handlePlaceOrder}
+            />
+
+            {/* 5. EDITORIAL SLIDE-OVER INDEX SELECTIONS DRAWER */}
+            {isMenuOpen && (
+              <div className="fixed inset-0 z-50 overflow-hidden font-sans">
+                {/* Menu backdrop */}
+                <div
+                  onClick={() => setIsMenuOpen(false)}
+                  className="absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity duration-300"
+                />
+
+                {/* Sidebar Area Container (Immersive Translucent glass) */}
+                <div className="absolute inset-y-0 left-0 max-w-[400px] w-full bg-[#02040a]/85 backdrop-blur-lg shadow-2xl flex flex-col transform transition-transform duration-300 border-r border-white/10 text-slate-300">
+                  <header className="px-6 py-6 border-b border-white/10 flex justify-between items-center bg-white/[0.02]">
+                    <span className="font-display font-bold tracking-[0.2em] text-white text-sm md:text-base">
+                      Maison Myriam Veil
+                    </span>
+                    <button
+                      id="close-sidebar-menu-btn"
+                      onClick={() => setIsMenuOpen(false)}
+                      className="text-slate-400 hover:text-blue-400 transition-colors p-1 cursor-pointer"
+                    >
+                      <X className="w-6 h-6 stroke-[1.5]" />
+                    </button>
+                  </header>
+
+                  {/* List Links segment */}
+                  <nav className="flex-1 px-8 py-10 flex flex-col justify-between overflow-y-auto">
+                    <div className="space-y-8">
+                      {/* L'Origine Entrypoint */}
+                      <button
+                        id="menu-origins-link"
+                        onClick={() => selectCollectionLine("origins")}
+                        className={`w-full text-left uppercase group block focus:outline-none ${
+                          currentCollection === "origins" ? "text-blue-400" : "text-slate-300"
+                        }`}
+                      >
+                        <p className="font-display tracking-[0.2em] text-[11px] font-semibold text-slate-500 group-hover:text-blue-400 transition-colors">
+                          01 // Entrypoint
+                        </p>
+                        <h3 className="font-serif italic text-2xl mt-1 tracking-tight text-white group-hover:translate-x-1.5 transition-transform duration-300">
+                          L'Origine
+                        </h3>
+                        <p className="text-[10px] text-slate-400 mt-0.5 normal-case font-light">
+                          Visualiser le portail d'accueil double division.
+                        </p>
+                      </button>
+
+                      {/* Haute Couture */}
+                      <button
+                        id="menu-couture-link"
+                        onClick={() => selectCollectionLine("couture")}
+                        className={`w-full text-left uppercase group block focus:outline-none ${
+                          currentCollection === "couture" ? "text-blue-400" : "text-slate-300"
+                        }`}
+                      >
+                        <p className="font-display tracking-[0.2em] text-[11px] font-semibold text-slate-500 group-hover:text-blue-400 transition-colors">
+                          02 // Ligne Sculptée
+                        </p>
+                        <h3 className="font-serif italic text-2xl mt-1 tracking-tight text-white group-hover:translate-x-1.5 transition-transform duration-300">
+                          Haute Couture
+                        </h3>
+                        <p className="text-[10px] text-slate-400 mt-0.5 normal-case font-light">
+                          Manteau Architecte, vestes taillées et robes géométriques.
+                        </p>
+                      </button>
+
+                      {/* L'Ecrin De Soie */}
+                      <button
+                        id="menu-ecrin-link"
+                        onClick={() => selectCollectionLine("ecrin")}
+                        className={`w-full text-left uppercase group block focus:outline-none ${
+                          currentCollection === "ecrin" ? "text-fuchsia-400" : "text-slate-300"
+                        }`}
+                      >
+                        <p className="font-display tracking-[0.2em] text-[11px] font-semibold text-slate-500 group-hover:text-fuchsia-400 transition-colors">
+                          03 // Joaillerie fine
+                        </p>
+                        <h3 className="font-serif italic text-2xl mt-1 tracking-tight text-white group-hover:translate-x-1.5 transition-transform duration-300">
+                          L'Écrin de Soie
+                        </h3>
+                        <p className="text-[10px] text-slate-400 mt-0.5 normal-case font-light">
+                          Alliances de perles de Pacifique et chaînages en vermeil d'or.
+                        </p>
+                      </button>
+
+                      {/* L'Héritage */}
+                      <button
+                        id="menu-heritage-link"
+                        onClick={() => selectCollectionLine("heritage")}
+                        className={`w-full text-left uppercase group block focus:outline-none ${
+                          currentCollection === "heritage" ? "text-violet-400" : "text-slate-300"
+                        }`}
+                      >
+                        <p className="font-display tracking-[0.2em] text-[11px] font-semibold text-slate-500 group-hover:text-violet-400 transition-colors">
+                          04 // Modest Apparel
+                        </p>
+                        <h3 className="font-serif italic text-2xl mt-1 tracking-tight text-white group-hover:translate-x-1.5 transition-transform duration-300">
+                          L'Héritage
+                        </h3>
+                        <p className="text-[10px] text-slate-400 mt-0.5 normal-case font-light">
+                          En mémoire de Marieme Fall. Abayas de soie et voiles drapés.
+                        </p>
+                      </button>
+
+                      {/* Le Journal */}
+                      <button
+                        id="menu-journal-link"
+                        onClick={() => setCurrentArticleSlug(null)}
+                        className={`w-full text-left uppercase group block focus:outline-none ${
+                          appStage === "journal" ? "text-[#b84b14]" : "text-slate-300"
+                        }`}
+                      >
+                        <p className="font-display tracking-[0.2em] text-[11px] font-semibold text-slate-500 group-hover:text-[#b84b14] transition-colors">
+                          05 // Le Journal
+                        </p>
+                        <h3 className="font-serif italic text-2xl mt-1 tracking-tight text-white group-hover:translate-x-1.5 transition-transform duration-300">
+                          Journal de Bord
+                        </h3>
+                        <p className="text-[10px] text-slate-400 mt-0.5 normal-case font-light">
+                          Histoires et inspirations de la parfumerie.
+                        </p>
+                      </button>
+                    </div>
+
+                    {/* Sidebar footer block Info */}
+                    <div className="border-t border-white/10 pt-6 text-[10px] tracking-widest text-[#9C8B89] uppercase font-semibold flex flex-col gap-3 bg-transparent">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.6)] animate-pulse"></span>
+                        <span className="text-slate-400">Maison Dakaroise · Ateliers au Sénégal</span>
+                      </div>
+                      <div className="text-[9px] text-slate-500 font-light normal-case">
+                        © {new Date().getFullYear()} @ Maison Myriam Veil. Tous droits réservés.
+                      </div>
+                    </div>
+                  </nav>
+                </div>
+              </div>
+            )}
+
+            {/* 6. PERSISTENT ADMIN FLOATING TRIGGER OR DASHBOARD PANEL */}
+            {isAdminMode && (
+              <>
+                {/* Elegant floating pill in bottom-left corner to reopen dashboard */}
+                <div className="fixed bottom-6 left-6 z-40 select-none">
+                  <button
+                    onClick={() => setIsAdminDashboardOpen(true)}
+                    className="flex items-center gap-2 px-5 py-3.5 bg-gradient-to-r from-blue-600 to-fuchsia-600 border border-white/10 hover:brightness-110 hover:-translate-y-0.5 text-white rounded-full shadow-[0_10px_30px_rgba(59,130,246,0.35)] transition-all duration-300 text-xs font-bold uppercase tracking-widest cursor-pointer active:scale-[0.98]"
+                  >
+                    <LayoutDashboard className="w-4 h-4" />
+                    <span>Console Admin</span>
+                    {orders.filter(o => o.status === "Nouvelle").length > 0 && (
+                      <span className="bg-red-500 text-white font-mono text-[9px] font-bold px-2 py-0.5 rounded-full leading-none">
+                        {orders.filter(o => o.status === "Nouvelle").length}
+                      </span>
+                    )}
+                  </button>
+                </div>
+
+                <AdminDashboard
+                  isOpen={isAdminDashboardOpen}
+                  onClose={() => setIsAdminDashboardOpen(false)}
+                  products={products}
+                  orders={orders}
+                  homepageContent={homepageContent}
+                  onUpdateHomepageContent={(newContent) => {
+                    setHomepageContent(newContent);
+                    setHasUnsavedChanges(true);
+                  }}
+                  onAddProduct={(col) => {
+                    handleOpenAddProduct(col);
+                    setIsAdminDashboardOpen(false);
+                  }}
+                  onEditProduct={(prod) => {
+                    handleOpenEditProduct(prod);
+                    setIsAdminDashboardOpen(false);
+                  }}
+                  onDuplicateProduct={(prod) => {
+                    handleDuplicateProduct(prod);
+                    setIsAdminDashboardOpen(false);
+                  }}
+                  onUpdateProductVisibility={handleUpdateProductVisibility}
+                  onDeleteProduct={handleDeleteProduct}
+                  onUpdateOrderStatus={handleUpdateOrderStatus}
+                  onDeleteOrder={handleDeleteOrder}
+                  onSave={handleSaveAll}
+                  onExport={handleExportDb}
+                  onImport={handleImportDb}
+                  onReset={handleResetSite}
+                  onLogout={handleAdminLogout}
+                  hasUnsavedChanges={hasUnsavedChanges}
+                />
+              </>
+            )}
+
+            {/* ======================================================== */}
+            {/* ==================== ADMIN MODALS ====================== */}
+            {/* ======================================================== */}
+
+            {/* A. ADMIN PASSCODE LOGIN MODAL */}
+            {isPasswordModalOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm">
+                <div className="bg-[#02040a] text-slate-300 max-w-sm w-full rounded-2xl shadow-2xl border border-white/10 p-6 relative flex flex-col font-sans">
+                  <button
+                    onClick={() => {
+                      setIsPasswordModalOpen(false);
+                      setLoginErrorMessage("");
+                      setPasswordError(false);
+                      setLoginStep("password");
+                      setMfaCode("");
+                    }}
+                    className="absolute top-4 right-4 text-slate-400 hover:text-white cursor-pointer shadow-sm"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                  <div className="flex flex-col items-center text-center mt-3 mb-5">
+                    {loginStep === "password" ? (
+                      <>
+                        <div className="w-12 h-12 bg-blue-500/10 border border-blue-500/30 rounded-full flex items-center justify-center text-blue-400 mb-3 animate-pulse">
+                          <Lock className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-base font-bold uppercase tracking-[0.15em] text-white">Connexion Directeur</h3>
+                        <p className="text-[10px] text-slate-400 mt-1 max-w-[260px] leading-relaxed">
+                          Connectez-vous à la console d'administration de la Maison.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="w-12 h-12 bg-rose-500/10 border border-rose-500/30 rounded-full flex items-center justify-center text-rose-400 mb-3 animate-pulse">
+                          <Key className="w-5 h-5" />
+                        </div>
+                        <h3 className="text-base font-bold uppercase tracking-[0.15em] text-white">Code de Sécurité</h3>
+                        <p className="text-[10px] text-slate-400 mt-1 max-w-[260px] leading-relaxed">
+                          Saisissez le code à 6 chiffres généré par votre application d'authentification.
+                        </p>
+                      </>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-4">
+                    {loginStep === "password" ? (
+                      <>
+                        <div>
+                          <input
+                            type="email"
+                            placeholder="Adresse email"
+                            value={adminEmailInput}
+                            onChange={(e) => setAdminEmailInput(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && handleAdminLogin()}
+                            className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none text-xs"
+                            autoFocus
+                          />
+                        </div>
+                        <div className="relative">
+                          <input
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Mot de passe"
+                            value={adminPasswordInput}
+                            onChange={(e) => setAdminPasswordInput(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && handleAdminLogin()}
+                            className="w-full pl-4 pr-10 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none text-xs font-semibold tracking-wide"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setShowPassword(!showPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                          >
+                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      <div>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={6}
+                          placeholder="Code à 6 chiffres"
+                          value={mfaCode}
+                          onChange={(e) => setMfaCode(e.target.value.replace(/[^0-9]/g, ""))}
+                          onKeyDown={(e) => e.key === "Enter" && handleMfaVerification()}
+                          className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none text-center text-sm font-bold tracking-[0.3em]"
+                          autoFocus
+                        />
+                      </div>
+                    )}
+
+                    {passwordError && (
+                      <div className="flex flex-col gap-2 text-red-400 text-[10px] bg-red-500/10 border border-red-500/20 py-2 px-3 rounded-lg text-left">
+                        <div className="flex items-center gap-1.5 font-semibold justify-center">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          <span>{loginErrorMessage.includes("⚠️") ? "Erreur de Connexion" : loginErrorMessage}</span>
+                        </div>
+                        {loginErrorMessage.includes("⚠️") && (
+                          <div className="mt-1 border-t border-red-500/25 pt-2 text-[9.5px] text-stone-300 font-mono whitespace-pre-wrap leading-relaxed max-h-[160px] overflow-y-auto pr-1">
+                            {loginErrorMessage}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {loginStep === "password" ? (
+                      <button
+                        onClick={handleAdminLogin}
+                        disabled={isLoggingIn}
+                        className="w-full h-11 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-600/50 text-white rounded-lg font-bold text-xs uppercase tracking-[0.15em] cursor-pointer active:scale-95 transition-transform flex items-center justify-center gap-2"
+                      >
+                        {isLoggingIn ? (
+                          <>
+                            <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                            <span>Vérification...</span>
+                          </>
+                        ) : (
+                          "Se Connecter"
+                        )}
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={handleMfaVerification}
+                          disabled={isLoggingIn}
+                          className="w-full h-11 bg-rose-600 hover:bg-rose-700 disabled:bg-rose-600/50 text-white rounded-lg font-bold text-xs uppercase tracking-[0.15em] cursor-pointer active:scale-95 transition-transform flex items-center justify-center gap-2"
+                        >
+                          {isLoggingIn ? (
+                            <>
+                              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                              <span>Validation...</span>
+                            </>
+                          ) : (
+                            "Valider le Code"
+                          )}
+                        </button>
+                        <button
+                          onClick={() => {
+                            setLoginStep("password");
+                            setLoginErrorMessage("");
+                            setPasswordError(false);
+                            setMfaCode("");
+                          }}
+                          className="w-full text-center text-[10px] text-slate-400 hover:text-white font-bold uppercase tracking-widest mt-2 cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          <ArrowRight className="w-3.5 h-3.5 rotate-180" />
+                          <span>Retour</span>
+                        </button>
+                      </>
+                    )}
+
+                    <div className="border-t border-white/5 pt-3 flex justify-center items-center gap-1.5">
+                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${authService.isConfigured() ? "bg-emerald-500 animate-pulse" : "bg-red-500"}`}></span>
+                      <span className="text-[8.5px] font-mono uppercase text-slate-500">
+                        {authService.isConfigured() ? "Connecté · Supabase Auth" : "Non configuré · Variables d'env manquantes"}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* B. PRODUCT ADD/EDIT FORM MODAL */}
+            {isProductModalOpen && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
+                <div className="bg-[#02040a] text-slate-300 max-w-lg w-full rounded-2xl shadow-2xl border border-white/10 flex flex-col max-h-[90vh] font-sans my-8">
+                  <header className="px-6 py-4 border-b border-white/10 flex justify-between items-center bg-white/[0.01]">
+                    <span className="font-display font-bold uppercase tracking-wider text-white text-sm md:text-base">
+                      {editingProduct ? "Modifier la pièce" : "Ajouter une pièce"}
+                    </span>
+                    <button 
+                      onClick={() => setIsProductModalOpen(false)} 
+                      className="text-slate-400 hover:text-white p-1 cursor-pointer"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </header>
+
+                  <div className="p-6 overflow-y-auto space-y-4 flex-1 text-sm font-light">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Nom de la pièce</label>
+                        <input
+                          type="text"
+                          value={productForm.name || ""}
+                          onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
+                          className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none"
+                          placeholder="Ex: abaya de soie"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Prix (en FCFA)</label>
+                        <input
+                          type="number"
+                          value={productForm.price || 0}
+                          onChange={(e) => setProductForm({ ...productForm, price: Number(e.target.value) })}
+                          className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Prix barré (optionnel)</label>
+                        <input
+                          type="number"
+                          value={productForm.compareAtPrice || ""}
+                          onChange={(e) => setProductForm({ ...productForm, compareAtPrice: e.target.value ? Number(e.target.value) : undefined })}
+                          className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none"
+                          placeholder="Ex: 45000"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Catégorie</label>
+                        <input
+                          type="text"
+                          value={productForm.category || ""}
+                          onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}
+                          className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none"
+                          placeholder="Ex: Abaya, Bagues, Manteaux"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Tailles (séparées par virgules)</label>
+                        <input
+                          type="text"
+                          value={productForm.sizes ? productForm.sizes.join(",") : ""}
+                          onChange={(e) => setProductForm({ ...productForm, sizes: e.target.value.split(",").map(s => s.trim()) })}
+                          className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none"
+                          placeholder="Ex: 36,38,40 ou Unique"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">URL de l'image</label>
+                      <input
+                        type="text"
+                        value={productForm.imageUrl || ""}
+                        onChange={(e) => setProductForm({ ...productForm, imageUrl: e.target.value })}
+                        className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none"
+                        placeholder="Ex: https://images.unsplash.com/..."
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Description</label>
+                      <textarea
+                        rows={3}
+                        value={productForm.description || ""}
+                        onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
+                        className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Composition (Optionnel)</label>
+                      <textarea
+                        rows={2}
+                        value={productForm.composition || ""}
+                        onChange={(e) => setProductForm({ ...productForm, composition: e.target.value })}
+                        className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Entretien (Optionnel)</label>
+                        <input
+                          type="text"
+                          value={productForm.entretien || ""}
+                          onChange={(e) => setProductForm({ ...productForm, entretien: e.target.value })}
+                          className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Livraison (Optionnel)</label>
+                        <input
+                          type="text"
+                          value={productForm.livraison || ""}
+                          onChange={(e) => setProductForm({ ...productForm, livraison: e.target.value })}
+                          className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  <footer className="px-6 py-4 border-t border-white/10 bg-white/[0.01] flex justify-end gap-3 flex-shrink-0">
+                    <button 
+                      onClick={() => setIsProductModalOpen(false)} 
+                      className="px-6 py-2.5 rounded-sm border border-white/10 text-slate-400 text-xs font-bold uppercase tracking-widest hover:bg-white/5 cursor-pointer"
+                    >
+                      Annuler
+                    </button>
+                    <button 
+                      onClick={handleSaveProductForm} 
+                      className="px-6 py-2.5 rounded-sm bg-blue-600 text-white text-xs font-bold uppercase tracking-widest hover:bg-blue-700 cursor-pointer shadow-lg shadow-blue-500/20"
+                    >
+                      Enregistrer
+                    </button>
+                  </footer>
+                </div>
+              </div>
+            )}
+
+            {/* AI Chat Assistant (remplace WhatsApp) */}
+            {!isAdminMode && !isProductDetailOpen && <AIChat />}
+
+            {/* Majestic Payment Success Modal */}
+            {paymentSuccessOrder && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in font-sans">
+                <div className="relative max-w-md w-full bg-gradient-to-br from-slate-950 via-black to-slate-900 border border-[#C6A962]/30 rounded-2xl p-8 text-center shadow-[0_20px_50px_rgba(198,169,98,0.15)] overflow-hidden">
+                  <div className="absolute top-0 left-0 w-32 h-32 bg-[#C6A962]/5 rounded-full blur-[40px]"></div>
+                  <div className="absolute bottom-0 right-0 w-32 h-32 bg-[#C6A962]/5 rounded-full blur-[40px]"></div>
+                  
+                  <span className="text-4xl font-serif italic bg-gradient-to-r from-[#C6A962] to-amber-300 bg-clip-text text-transparent mb-6 block animate-pulse">
+                    Maison Myriam Veil
+                  </span>
+                  <div className="w-12 h-[1px] bg-[#C6A962]/30 mx-auto mb-6"></div>
+                  
+                  <div className="w-16 h-16 bg-[#C6A962]/10 border border-[#C6A962]/40 rounded-full flex items-center justify-center mx-auto mb-6 text-[#C6A962] shadow-[0_0_15px_rgba(198,169,98,0.2)]">
+                    <Sparkles className="w-8 h-8 animate-pulse" />
+                  </div>
+
+                  <h3 className="font-display font-bold uppercase tracking-[0.2em] text-lg text-white mb-2">
+                    Paiement Confirmé
+                  </h3>
+                  <p className="text-[11px] font-light text-slate-400 tracking-wide max-w-xs mx-auto uppercase mb-6 leading-relaxed">
+                    Votre règlement en ligne a été validé avec succès. Notre atelier de couture prépare votre commande d'exception.
+                  </p>
+
+                  <div className="text-xs font-mono text-[#C6A962] bg-[#C6A962]/10 border border-[#C6A962]/20 px-4 py-2.5 rounded-full inline-block mb-6">
+                    N° DE TRANSACTION : {paymentSuccessOrder.id}
+                  </div>
+
+                  <div className="border-t border-white/5 pt-5 mb-6 text-left space-y-2 max-w-xs mx-auto">
+                    <div className="flex justify-between text-[10px] uppercase tracking-wider text-slate-500">
+                      <span>Client</span>
+                      <span className="text-slate-300 font-medium">{paymentSuccessOrder.customerName}</span>
+                    </div>
+                    <div className="flex justify-between text-[10px] uppercase tracking-wider text-slate-500">
+                      <span>Téléphone</span>
+                      <span className="text-slate-300 font-mono font-medium">{paymentSuccessOrder.customerPhone}</span>
+                    </div>
+                    <div className="flex justify-between text-[10px] uppercase tracking-wider text-slate-500">
+                      <span>Montant Payé</span>
+                      <span className="text-[#C6A962] font-semibold">{paymentSuccessOrder.total.toLocaleString('fr-FR')} FCFA</span>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setPaymentSuccessOrder(null)}
+                    className="w-full bg-gradient-to-r from-amber-600 to-[#C6A962] hover:brightness-110 active:scale-[0.98] text-white py-3 px-6 rounded-lg text-xs font-bold uppercase tracking-widest transition-all duration-300 cursor-pointer shadow-lg shadow-amber-500/10"
+                  >
+                    Découvrir de nouvelles pièces
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         }
       />
