@@ -8,7 +8,7 @@ import { Product, Order, HomepageContent } from "../types";
 import { 
   X, LayoutDashboard, ShoppingBag, Package, Database, 
   TrendingUp, CheckCircle, Clock, Truck, Trash2, Plus, 
-  Edit, Save, Download, Upload, RotateCcw, ArrowRight, Eye, RefreshCw, Lock, Copy, FileText, BookOpen, Menu, ShieldCheck, AlertCircle, Settings
+  Edit, Save, Download, Upload, RotateCcw, ArrowRight, Eye, RefreshCw, Lock, Copy, FileText, BookOpen, Menu, ShieldCheck, AlertCircle, Settings, Users, UserPlus, UserX, Shield, ShieldAlert, Mail, Search
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import AdminRealtimeToast from "./AdminRealtimeToast";
@@ -59,7 +59,7 @@ export default function AdminDashboard({
   onLogout,
   hasUnsavedChanges
 }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"overview" | "orders" | "catalog" | "database" | "journal" | "factures" | "security" | "settings">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "orders" | "catalog" | "database" | "journal" | "factures" | "security" | "settings" | "users">("overview");
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCollection, setFilterCollection] = useState<string>("all");
   const [expandedOrderId, setExpandedOrderId] = useState<string | null>(null);
@@ -350,6 +350,7 @@ export default function AdminDashboard({
                 { id: "database", label: "Base de données", icon: Database, color: "amber" },
                 { id: "journal", label: "Journal SEO", icon: BookOpen, color: "orange" },
                 { id: "factures", label: "Factures", icon: FileText, color: "emerald" },
+                { id: "users", label: "Utilisateurs", icon: Users, color: "cyan" },
                 { id: "security", label: "Sécurité (MFA)", icon: ShieldCheck, color: "rose" },
                 { id: "settings", label: "Paramètres Site", icon: Settings, color: "blue" },
               ].map((tab) => {
@@ -363,7 +364,8 @@ export default function AdminDashboard({
                   amber: { bg: "bg-amber-600/15", border: "border-amber-500/30", text: "text-amber-400", shadow: "shadow-[0_0_15px_rgba(245,158,11,0.1)]" },
                   orange: { bg: "bg-orange-600/15", border: "border-orange-500/30", text: "text-orange-400", shadow: "shadow-[0_0_15px_rgba(249,115,22,0.1)]" },
                   emerald: { bg: "bg-emerald-600/15", border: "border-emerald-500/30", text: "text-emerald-400", shadow: "shadow-[0_0_15px_rgba(16,185,129,0.1)]" },
-                  rose: { bg: "bg-rose-600/15", border: "border-rose-500/30", text: "text-rose-400", shadow: "shadow-[0_0_15px_rgba(244,63,94,0.1)]" }
+                  rose: { bg: "bg-rose-600/15", border: "border-rose-500/30", text: "text-rose-400", shadow: "shadow-[0_0_15px_rgba(244,63,94,0.1)]" },
+                  cyan: { bg: "bg-cyan-600/15", border: "border-cyan-500/30", text: "text-cyan-400", shadow: "shadow-[0_0_15px_rgba(6,182,212,0.1)]" }
                 };
                 
                 const style = colorClasses[tab.color];
@@ -1760,6 +1762,13 @@ export default function AdminDashboard({
                 </div>
               </div>
             )}
+
+            {/* ======================================================== */}
+            {/* =================== TAB 9: UTILISATEURS ================ */}
+            {/* ======================================================== */}
+            {activeTab === "users" && (
+              <UsersTabContent />
+            )}
           </main>
         </div>
 
@@ -1774,5 +1783,381 @@ export default function AdminDashboard({
       </div>
       </motion.div>
     </AnimatePresence>
+  );
+}
+
+// ================================================================
+// USERS TAB COMPONENT — Gestion des utilisateurs et rôles admin
+// ================================================================
+function UsersTabContent() {
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Assign role modal
+  const [assignModalOpen, setAssignModalOpen] = useState(false);
+  const [assignEmail, setAssignEmail] = useState("");
+  const [assignRole, setAssignRole] = useState<"super_admin" | "editor" | "logistician">("editor");
+  const [assigning, setAssigning] = useState(false);
+
+  const fetchUsers = async () => {
+    if (!isSupabaseConfigured()) {
+      setError("Supabase n'est pas configuré. Impossible de gérer les utilisateurs.");
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      // Récupérer les utilisateurs depuis la table admin_roles
+      const { data: adminRoles, error: rolesError } = await supabase
+        .from('admin_roles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (rolesError) throw rolesError;
+
+      // Récupérer les utilisateurs depuis auth.users via la fonction RPC
+      const { data: authUsers, error: usersError } = await supabase.rpc('get_all_users');
+
+      if (usersError) {
+        // Fallback: on utilise seulement les données de admin_roles
+        setUsers(adminRoles || []);
+      } else {
+        // Fusionner les données
+        const merged = (authUsers || []).map((au: any) => {
+          const role = (adminRoles || []).find((r: any) => r.user_id === au.id);
+          return {
+            id: au.id,
+            email: au.email,
+            created_at: au.created_at,
+            last_sign_in_at: au.last_sign_in_at,
+            role: role?.role || null,
+            approved_at: role?.approved_at || null,
+          };
+        });
+        setUsers(merged);
+      }
+    } catch (err: any) {
+      setError(err.message || "Erreur lors du chargement des utilisateurs.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const handleAssignRole = async () => {
+    if (!assignEmail.trim()) {
+      setError("Veuillez saisir une adresse email.");
+      return;
+    }
+    setAssigning(true);
+    setError("");
+    setSuccess("");
+    try {
+      const { data, error } = await supabase.rpc('assign_admin_role', {
+        target_email: assignEmail.trim(),
+        target_role: assignRole,
+      });
+      if (error) throw error;
+      setSuccess(`✓ ${data || "Rôle assigné avec succès !"}`);
+      setAssignEmail("");
+      setAssignModalOpen(false);
+      await fetchUsers();
+    } catch (err: any) {
+      setError(err.message || "Erreur lors de l'assignation du rôle.");
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const handleRemoveRole = async (userId: string, email: string) => {
+    if (!window.confirm(`Êtes-vous sûr de vouloir retirer le rôle admin de ${email} ?`)) return;
+    setError("");
+    setSuccess("");
+    try {
+      const { error } = await supabase
+        .from('admin_roles')
+        .delete()
+        .eq('user_id', userId);
+      if (error) throw error;
+      setSuccess(`✓ Rôle retiré pour ${email}`);
+      await fetchUsers();
+    } catch (err: any) {
+      setError(err.message || "Erreur lors du retrait du rôle.");
+    }
+  };
+
+  const handleChangeRole = async (userId: string, email: string, newRole: string) => {
+    setError("");
+    setSuccess("");
+    try {
+      const { data, error } = await supabase.rpc('assign_admin_role', {
+        target_email: email,
+        target_role: newRole,
+      });
+      if (error) throw error;
+      setSuccess(`✓ Rôle de ${email} mis à jour en ${newRole}`);
+      await fetchUsers();
+    } catch (err: any) {
+      setError(err.message || "Erreur lors du changement de rôle.");
+    }
+  };
+
+  const filteredUsers = users.filter(u =>
+    u.email?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const roleBadge = (role: string | null) => {
+    if (!role) return null;
+    const styles: Record<string, string> = {
+      super_admin: "bg-rose-500/10 border-rose-500/30 text-rose-400",
+      editor: "bg-blue-500/10 border-blue-500/30 text-blue-400",
+      logistician: "bg-emerald-500/10 border-emerald-500/30 text-emerald-400",
+    };
+    const labels: Record<string, string> = {
+      super_admin: "Super Admin",
+      editor: "Éditeur",
+      logistician: "Logisticien",
+    };
+    return (
+      <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${styles[role] || "bg-slate-500/10 border-slate-500/30 text-slate-400"}`}>
+        {labels[role] || role}
+      </span>
+    );
+  };
+
+  return (
+    <div className="space-y-6 max-w-4xl mx-auto py-4 font-sans text-slate-300">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-cyan-500/10 border border-cyan-500/30 rounded-full flex items-center justify-center text-cyan-400">
+            <Users className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Gestion des Utilisateurs</h3>
+            <p className="text-[9px] text-slate-500 uppercase tracking-widest font-mono mt-0.5">
+              Gérez les rôles et accès à la console d'administration
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="relative">
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input
+              type="text"
+              placeholder="Rechercher un email..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-8 pr-3 py-2 rounded-lg border border-white/10 bg-white/5 text-xs text-white focus:border-cyan-500 focus:outline-none placeholder:text-slate-500 w-48"
+            />
+          </div>
+          <button
+            onClick={() => setAssignModalOpen(true)}
+            className="flex items-center gap-1.5 bg-cyan-600 hover:bg-cyan-700 text-white px-3.5 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+          >
+            <UserPlus className="w-3.5 h-3.5" /> Assigner un rôle
+          </button>
+          <button
+            onClick={fetchUsers}
+            className="p-2 border border-white/10 hover:border-white/20 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
+            title="Rafraîchir"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Notifications */}
+      {error && (
+        <div className="flex items-center gap-2.5 text-xs text-red-400 bg-red-500/10 border border-red-500/20 py-3 px-4 rounded-xl">
+          <AlertCircle className="w-4 h-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
+      {success && (
+        <div className="flex items-center gap-2.5 text-xs text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 py-3 px-4 rounded-xl">
+          <CheckCircle className="w-4 h-4 shrink-0 animate-pulse" />
+          <span>{success}</span>
+        </div>
+      )}
+
+      {/* Assign Role Modal */}
+      {assignModalOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-[#02040a] text-slate-300 max-w-sm w-full rounded-2xl shadow-2xl border border-white/10 p-6 relative flex flex-col font-sans">
+            <button
+              onClick={() => setAssignModalOpen(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-white cursor-pointer"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="flex flex-col items-center text-center mt-3 mb-5">
+              <div className="w-12 h-12 bg-cyan-500/10 border border-cyan-500/30 rounded-full flex items-center justify-center text-cyan-400 mb-3">
+                <UserPlus className="w-5 h-5" />
+              </div>
+              <h3 className="text-base font-bold uppercase tracking-[0.15em] text-white">Assigner un Rôle Admin</h3>
+              <p className="text-[10px] text-slate-400 mt-1 max-w-[260px] leading-relaxed">
+                Donnez l'accès à la console d'administration à un utilisateur existant.
+              </p>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Email de l'utilisateur</label>
+                <input
+                  type="email"
+                  placeholder="email@exemple.com"
+                  value={assignEmail}
+                  onChange={(e) => setAssignEmail(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleAssignRole()}
+                  className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-cyan-500 focus:outline-none text-xs"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Rôle</label>
+                <select
+                  value={assignRole}
+                  onChange={(e) => setAssignRole(e.target.value as any)}
+                  className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-cyan-500 focus:outline-none text-xs cursor-pointer"
+                >
+                  <option value="editor" className="bg-[#02040a]">Éditeur (Gestion catalogue & commandes)</option>
+                  <option value="logistician" className="bg-[#02040a]">Logisticien (Gestion commandes uniquement)</option>
+                  <option value="super_admin" className="bg-[#02040a]">Super Admin (Accès complet)</option>
+                </select>
+              </div>
+              <button
+                onClick={handleAssignRole}
+                disabled={assigning}
+                className="w-full h-11 bg-cyan-600 hover:bg-cyan-700 disabled:bg-cyan-600/50 text-white rounded-lg font-bold text-xs uppercase tracking-[0.15em] cursor-pointer active:scale-95 transition-transform flex items-center justify-center gap-2"
+              >
+                {assigning ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></span>
+                    <span>Assignation...</span>
+                  </>
+                ) : (
+                  "Assigner le Rôle"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Users Table */}
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-16">
+          <span className="w-8 h-8 border-3 border-cyan-500 border-t-transparent rounded-full animate-spin mb-4"></span>
+          <span className="text-xs uppercase font-mono tracking-widest text-slate-500">Chargement des utilisateurs...</span>
+        </div>
+      ) : (
+        <div className="border border-white/10 rounded-xl overflow-hidden bg-white/[0.01]">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-white/[0.01] border-b border-white/5 text-[9px] uppercase tracking-widest text-slate-500 font-bold">
+                  <th className="px-5 py-3">Email</th>
+                  <th className="px-5 py-3">Rôle Actuel</th>
+                  <th className="px-5 py-3">Inscrit le</th>
+                  <th className="px-5 py-3">Dernière Connexion</th>
+                  <th className="px-5 py-3 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5 text-xs font-light font-sans">
+                {filteredUsers.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-5 py-12 text-center text-slate-500 uppercase font-semibold">
+                      {searchQuery ? "Aucun utilisateur trouvé." : "Aucun utilisateur chargé."}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredUsers.map((user, index) => (
+                    <motion.tr
+                      key={user.id}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.03, duration: 0.3 }}
+                      className="hover:bg-white/[0.02] backdrop-blur-sm transition-all"
+                    >
+                      <td className="px-5 py-3">
+                        <div className="flex items-center gap-2">
+                          <Mail className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                          <span className="font-semibold text-white">{user.email || "Inconnu"}</span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3">
+                        {user.role ? (
+                          roleBadge(user.role)
+                        ) : (
+                          <span className="text-slate-500 text-[10px] uppercase tracking-wider">Aucun rôle</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3 text-slate-400 font-mono text-[10px]">
+                        {user.created_at ? new Date(user.created_at).toLocaleDateString('fr-FR') : "---"}
+                      </td>
+                      <td className="px-5 py-3 text-slate-400 font-mono text-[10px]">
+                        {user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString('fr-FR') : "Jamais"}
+                      </td>
+                      <td className="px-5 py-3">
+                        <div className="flex justify-center items-center gap-2">
+                          {user.role ? (
+                            <>
+                              <select
+                                value={user.role}
+                                onChange={(e) => handleChangeRole(user.id, user.email, e.target.value)}
+                                className="text-[9px] font-bold uppercase tracking-wider px-2 py-1.5 rounded bg-white/5 border border-white/10 text-slate-300 focus:outline-none cursor-pointer"
+                              >
+                                <option value="editor" className="bg-[#02040a]">Éditeur</option>
+                                <option value="logistician" className="bg-[#02040a]">Logisticien</option>
+                                <option value="super_admin" className="bg-[#02040a]">Super Admin</option>
+                              </select>
+                              <button
+                                onClick={() => handleRemoveRole(user.id, user.email)}
+                                className="size-7 border border-white/10 hover:border-red-500/30 hover:text-red-400 flex items-center justify-center rounded transition-colors cursor-pointer"
+                                title="Retirer le rôle"
+                              >
+                                <UserX className="w-3.5 h-3.5" />
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setAssignEmail(user.email);
+                                setAssignModalOpen(true);
+                              }}
+                              className="px-2.5 py-1.5 border border-white/10 hover:border-cyan-500/30 hover:text-cyan-400 text-slate-400 rounded transition-colors flex items-center gap-1 cursor-pointer font-bold uppercase text-[9px]"
+                            >
+                              <Shield className="w-3 h-3" /> Attribuer
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </motion.tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Info box */}
+      <div className="p-4 border border-white/5 bg-white/[0.005] rounded-xl text-[10px] text-slate-500 leading-relaxed">
+        <p className="flex items-center gap-1.5">
+          <ShieldAlert className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+          <span>
+            Les rôles sont stockés dans la table <code className="text-cyan-400 font-mono">admin_roles</code> de Supabase.
+            Les utilisateurs doivent se déconnecter et se reconnecter pour que leur nouveau rôle soit pris en compte dans le JWT.
+          </span>
+        </p>
+      </div>
+    </div>
   );
 }
