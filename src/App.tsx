@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, lazy, Suspense } from "react";
-import { Routes, Route, useNavigate, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
 import { CollectionId, Product, CartItem, HomepageContent, Order } from "./types";
 import { PRODUCTS, DEFAULT_HOMEPAGE_CONTENT } from "./data";
 import { 
@@ -461,7 +461,7 @@ export default function App() {
 
   return (
     <Routes>
-      {/* Admin Route — Full page admin dashboard */}
+      {/* Admin Route — Full page admin dashboard (indépendant, sans le layout principal) */}
       <Route
         path="/admin"
         element={
@@ -498,6 +498,12 @@ export default function App() {
             />
           </Suspense>
         }
+      />
+
+      {/* Admin Route — Redirect /administration to /admin */}
+      <Route
+        path="/administration"
+        element={<Navigate to="/admin" replace />}
       />
 
       {/* Main Site Route */}
