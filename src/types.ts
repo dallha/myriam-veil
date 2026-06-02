@@ -15,6 +15,7 @@ export interface Product {
   description: string;
   category?: string;
   sizes?: string[];
+  colors?: string[];
   composition?: string;
   entretien?: string;
   livraison?: string;

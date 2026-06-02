@@ -1005,14 +1005,23 @@ export default function App() {
               </div>
             )}
 
-            {/* B. PRODUCT ADD/EDIT FORM MODAL */}
+            {/* B. PRODUCT ADD/EDIT FORM MODAL — Version améliorée */}
             {isProductModalOpen && (
               <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm overflow-y-auto">
-                <div className="bg-[#02040a] text-slate-300 max-w-lg w-full rounded-2xl shadow-2xl border border-white/10 flex flex-col max-h-[90vh] font-sans my-8">
+                <div className="bg-[#02040a] text-slate-300 max-w-2xl w-full rounded-2xl shadow-2xl border border-white/10 flex flex-col max-h-[90vh] font-sans my-8">
                   <header className="px-6 py-4 border-b border-white/10 flex justify-between items-center bg-white/[0.01]">
-                    <span className="font-display font-bold uppercase tracking-wider text-white text-sm md:text-base">
-                      {editingProduct ? "Modifier la pièce" : "Ajouter une pièce"}
-                    </span>
+                    <div className="flex items-center gap-3">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                        productForm.collectionId === "couture" ? "bg-blue-500/10 text-blue-400 border border-blue-500/20" :
+                        productForm.collectionId === "ecrin" ? "bg-fuchsia-500/10 text-fuchsia-400 border border-fuchsia-500/20" :
+                        "bg-violet-500/10 text-violet-400 border border-violet-500/20"
+                      }`}>
+                        {productForm.collectionId === "couture" ? "HC" : productForm.collectionId === "ecrin" ? "ES" : "LH"}
+                      </div>
+                      <span className="font-display font-bold uppercase tracking-wider text-white text-sm md:text-base">
+                        {editingProduct ? "Modifier la pièce" : "Nouvelle pièce"}
+                      </span>
+                    </div>
                     <button 
                       onClick={() => setIsProductModalOpen(false)} 
                       className="text-slate-400 hover:text-white p-1 cursor-pointer"
@@ -1021,110 +1030,239 @@ export default function App() {
                     </button>
                   </header>
 
-                  <div className="p-6 overflow-y-auto space-y-4 flex-1 text-sm font-light">
+                  <div className="p-6 overflow-y-auto space-y-5 flex-1 text-sm font-light">
+                    {/* LIGNE 1 : Nom + Prix + Prix barré */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Nom de la pièce</label>
+                      <div className="md:col-span-1">
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Nom de la pièce *</label>
                         <input
                           type="text"
                           value={productForm.name || ""}
                           onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
-                          className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none"
-                          placeholder="Ex: abaya de soie"
+                          className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none placeholder:text-slate-600"
+                          placeholder="Ex: Abaya de soie"
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Prix (en FCFA)</label>
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Prix (FCFA) *</label>
                         <input
                           type="number"
-                          value={productForm.price || 0}
+                          min={0}
+                          step={500}
+                          value={productForm.price || ""}
                           onChange={(e) => setProductForm({ ...productForm, price: Number(e.target.value) })}
-                          className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none"
+                          className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none placeholder:text-slate-600"
+                          placeholder="Ex: 35000"
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Prix barré (optionnel)</label>
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Prix barré (optionnel)</label>
                         <input
                           type="number"
+                          min={0}
+                          step={500}
                           value={productForm.compareAtPrice || ""}
                           onChange={(e) => setProductForm({ ...productForm, compareAtPrice: e.target.value ? Number(e.target.value) : undefined })}
-                          className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none"
+                          className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none placeholder:text-slate-600"
                           placeholder="Ex: 45000"
                         />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    {/* LIGNE 2 : Collection (lecture seule) + Catégorie (select) */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Catégorie</label>
-                        <input
-                          type="text"
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Collection</label>
+                        <div className={`px-4 py-2.5 rounded-lg border text-xs font-bold uppercase tracking-wider ${
+                          productForm.collectionId === "couture" ? "bg-blue-500/10 border-blue-500/30 text-blue-400" :
+                          productForm.collectionId === "ecrin" ? "bg-fuchsia-500/10 border-fuchsia-500/30 text-fuchsia-400" :
+                          "bg-violet-500/10 border-violet-500/30 text-violet-400"
+                        }`}>
+                          {productForm.collectionId === "couture" ? "Haute Couture" :
+                           productForm.collectionId === "ecrin" ? "L'Écrin de Soie" :
+                           "L'Héritage"}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Catégorie *</label>
+                        <select
                           value={productForm.category || ""}
                           onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}
-                          className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none"
-                          placeholder="Ex: Abaya, Bagues, Manteaux"
-                        />
+                          className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none cursor-pointer"
+                        >
+                          <option value="" disabled className="bg-[#02040a] text-slate-500">Sélectionner une catégorie</option>
+                          {productForm.collectionId === "couture" && (
+                            <>
+                              <option value="Manteaux" className="bg-[#02040a]">Manteaux</option>
+                              <option value="Vestes" className="bg-[#02040a]">Vestes</option>
+                              <option value="Robes" className="bg-[#02040a]">Robes</option>
+                              <option value="Ensembles" className="bg-[#02040a]">Ensembles</option>
+                              <option value="Pantalons" className="bg-[#02040a]">Pantalons</option>
+                              <option value="Accessoires" className="bg-[#02040a]">Accessoires</option>
+                            </>
+                          )}
+                          {productForm.collectionId === "ecrin" && (
+                            <>
+                              <option value="Bagues" className="bg-[#02040a]">Bagues</option>
+                              <option value="Colliers" className="bg-[#02040a]">Colliers</option>
+                              <option value="Bracelets" className="bg-[#02040a]">Bracelets</option>
+                              <option value="Boucles d'oreilles" className="bg-[#02040a]">Boucles d'oreilles</option>
+                              <option value="Pendentifs" className="bg-[#02040a]">Pendentifs</option>
+                              <option value="Parures" className="bg-[#02040a]">Parures</option>
+                            </>
+                          )}
+                          {productForm.collectionId === "heritage" && (
+                            <>
+                              <option value="Abayas" className="bg-[#02040a]">Abayas</option>
+                              <option value="Voiles" className="bg-[#02040a]">Voiles</option>
+                              <option value="Jilbabs" className="bg-[#02040a]">Jilbabs</option>
+                              <option value="Khimars" className="bg-[#02040a]">Khimars</option>
+                              <option value="Accessoires" className="bg-[#02040a]">Accessoires</option>
+                            </>
+                          )}
+                        </select>
                       </div>
-                      <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Tailles (séparées par virgules)</label>
+                    </div>
+
+                    {/* LIGNE 3 : Tailles (suggestions par collection) */}
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Tailles disponibles</label>
+                      <div className="flex flex-wrap gap-2 mb-2">
+                        {(productForm.collectionId === "couture" ? ["34", "36", "38", "40", "42", "44", "46"] :
+                          productForm.collectionId === "heritage" ? ["Taille Unique", "S", "M", "L", "XL", "2XL", "3XL"] :
+                          ["Taille Unique"]
+                        ).map((size) => {
+                          const isSelected = productForm.sizes?.includes(size);
+                          return (
+                            <button
+                              key={size}
+                              type="button"
+                              onClick={() => {
+                                const current = productForm.sizes || [];
+                                const updated = isSelected
+                                  ? current.filter(s => s !== size)
+                                  : [...current, size];
+                                setProductForm({ ...productForm, sizes: updated });
+                              }}
+                              className={`px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider border transition-all cursor-pointer ${
+                                isSelected
+                                  ? "bg-blue-500/20 border-blue-500/40 text-blue-300 shadow-[0_0_10px_rgba(59,130,246,0.15)]"
+                                  : "bg-white/5 border-white/10 text-slate-400 hover:border-white/30 hover:text-slate-200"
+                              }`}
+                            >
+                              {size}
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <div className="flex items-center gap-2">
                         <input
                           type="text"
-                          value={productForm.sizes ? productForm.sizes.join(",") : ""}
-                          onChange={(e) => setProductForm({ ...productForm, sizes: e.target.value.split(",").map(s => s.trim()) })}
-                          className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none"
-                          placeholder="Ex: 36,38,40 ou Unique"
+                          placeholder="Taille personnalisée..."
+                          className="flex-1 px-3 py-1.5 rounded-lg border border-white/10 bg-white/5 text-white text-[11px] focus:border-blue-500 focus:outline-none placeholder:text-slate-600"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" && (e.target as HTMLInputElement).value.trim()) {
+                              const newSize = (e.target as HTMLInputElement).value.trim();
+                              const current = productForm.sizes || [];
+                              if (!current.includes(newSize)) {
+                                setProductForm({ ...productForm, sizes: [...current, newSize] });
+                              }
+                              (e.target as HTMLInputElement).value = "";
+                            }
+                          }}
                         />
+                        <span className="text-[9px] text-slate-500 font-mono">Entrée pour ajouter</span>
+                      </div>
+                      {productForm.sizes && productForm.sizes.length > 0 && (
+                        <p className="text-[9px] text-slate-500 mt-1 font-mono">
+                          {productForm.sizes.length} taille{productForm.sizes.length > 1 ? "s" : ""} sélectionnée{productForm.sizes.length > 1 ? "s" : ""}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* LIGNE 4 : Image URL + Aperçu */}
+                    <div>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">URL de l'image *</label>
+                      <div className="flex gap-3">
+                        <div className="flex-1">
+                          <input
+                            type="text"
+                            value={productForm.imageUrl || ""}
+                            onChange={(e) => setProductForm({ ...productForm, imageUrl: e.target.value })}
+                            className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none placeholder:text-slate-600"
+                            placeholder="https://images.unsplash.com/..."
+                          />
+                        </div>
+                        {productForm.imageUrl && (
+                          <div className="w-14 h-14 shrink-0 rounded-lg overflow-hidden border border-white/10 bg-white/5">
+                            <img
+                              src={productForm.imageUrl}
+                              alt="Aperçu"
+                              className="w-full h-full object-cover"
+                              onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                            />
+                          </div>
+                        )}
                       </div>
                     </div>
 
+                    {/* LIGNE 5 : Description */}
                     <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">URL de l'image</label>
-                      <input
-                        type="text"
-                        value={productForm.imageUrl || ""}
-                        onChange={(e) => setProductForm({ ...productForm, imageUrl: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none"
-                        placeholder="Ex: https://images.unsplash.com/..."
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Description</label>
+                      <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Description</label>
                       <textarea
                         rows={3}
                         value={productForm.description || ""}
                         onChange={(e) => setProductForm({ ...productForm, description: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none"
+                        className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none placeholder:text-slate-600 resize-none"
+                        placeholder="Description détaillée de la pièce..."
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Composition (Optionnel)</label>
-                      <textarea
-                        rows={2}
-                        value={productForm.composition || ""}
-                        onChange={(e) => setProductForm({ ...productForm, composition: e.target.value })}
-                        className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
+                    {/* LIGNE 6 : Composition + Couleurs */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Entretien (Optionnel)</label>
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Composition / Matières</label>
+                        <textarea
+                          rows={2}
+                          value={productForm.composition || ""}
+                          onChange={(e) => setProductForm({ ...productForm, composition: e.target.value })}
+                          className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none placeholder:text-slate-600 resize-none"
+                          placeholder="Ex: 100% Soie naturelle"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Couleurs disponibles</label>
+                        <input
+                          type="text"
+                          value={productForm.colors ? productForm.colors.join(", ") : ""}
+                          onChange={(e) => setProductForm({ ...productForm, colors: e.target.value.split(",").map(s => s.trim()).filter(Boolean) })}
+                          className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none placeholder:text-slate-600"
+                          placeholder="Ex: Noir, Blanc, Bleu roi"
+                        />
+                        <p className="text-[9px] text-slate-500 mt-1 font-mono">Séparées par des virgules</p>
+                      </div>
+                    </div>
+
+                    {/* LIGNE 7 : Entretien + Livraison */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Entretien</label>
                         <input
                           type="text"
                           value={productForm.entretien || ""}
                           onChange={(e) => setProductForm({ ...productForm, entretien: e.target.value })}
-                          className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none"
+                          className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none placeholder:text-slate-600"
+                          placeholder="Ex: Lavage à sec recommandé"
                         />
                       </div>
                       <div>
-                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Livraison (Optionnel)</label>
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Livraison</label>
                         <input
                           type="text"
                           value={productForm.livraison || ""}
                           onChange={(e) => setProductForm({ ...productForm, livraison: e.target.value })}
-                          className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none"
+                          className="w-full px-4 py-2.5 rounded-lg border border-white/10 bg-white/5 text-white focus:border-blue-500 focus:outline-none placeholder:text-slate-600"
+                          placeholder="Ex: Livraison sous 5-7 jours"
                         />
                       </div>
                     </div>
@@ -1133,15 +1271,15 @@ export default function App() {
                   <footer className="px-6 py-4 border-t border-white/10 bg-white/[0.01] flex justify-end gap-3 flex-shrink-0">
                     <button 
                       onClick={() => setIsProductModalOpen(false)} 
-                      className="px-6 py-2.5 rounded-sm border border-white/10 text-slate-400 text-xs font-bold uppercase tracking-widest hover:bg-white/5 cursor-pointer"
+                      className="px-6 py-2.5 rounded-lg border border-white/10 text-slate-400 text-xs font-bold uppercase tracking-widest hover:bg-white/5 cursor-pointer transition-colors"
                     >
                       Annuler
                     </button>
                     <button 
                       onClick={handleSaveProductForm} 
-                      className="px-6 py-2.5 rounded-sm bg-blue-600 text-white text-xs font-bold uppercase tracking-widest hover:bg-blue-700 cursor-pointer shadow-lg shadow-blue-500/20"
+                      className="px-6 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-fuchsia-600 text-white text-xs font-bold uppercase tracking-widest hover:brightness-110 cursor-pointer shadow-lg shadow-blue-500/20 transition-all active:scale-95"
                     >
-                      Enregistrer
+                      {editingProduct ? "Enregistrer les modifications" : "Ajouter au catalogue"}
                     </button>
                   </footer>
                 </div>
