@@ -162,7 +162,7 @@ export default function CollectionEcrin({
       {stage === "catalog" && (
         <div className="page-enter w-full bg-transparent">
           {/* Breadcrumb row & collection headers */}
-          <div className="px-6 py-4 border-b border-white/10 flex justify-between items-center bg-black/10 backdrop-blur-md">
+          <div className="px-4 md:px-6 py-4 border-b border-white/10 flex justify-between items-center bg-black/10 backdrop-blur-md">
             <button
               onClick={() => setStage("home")}
               className="text-xs font-bold uppercase tracking-wider flex items-center gap-1 hover:text-fuchsia-400 transition-colors text-slate-300 cursor-pointer"
@@ -174,7 +174,7 @@ export default function CollectionEcrin({
           </div>
 
           {/* Luxury Filter tabs */}
-          <div className="flex justify-between items-center px-6 py-4 bg-black/20 border-b border-white/5 sticky top-16 z-20 gap-4 backdrop-blur-md">
+          <div className="flex justify-between items-center px-4 md:px-6 py-4 bg-black/20 border-b border-white/5 sticky top-16 z-20 gap-4 backdrop-blur-md">
             <div className="flex gap-2.5 overflow-x-auto hide-scrollbar">
               {categoriesList.map((cat) => (
                 <button

@@ -92,7 +92,7 @@ export default function CollectionCouture({
         /* --- HIGH DESIGN GRID CATALOG (Screen 6) --- */
         <div className="w-full">
           {/* Subheader and Filters Menu */}
-          <div className="border-b border-white/10 flex justify-between items-center px-6 py-4 bg-black/10 backdrop-blur-md">
+          <div className="border-b border-white/10 flex justify-between items-center px-4 md:px-6 py-4 bg-black/10 backdrop-blur-md">
             <button
               id="filtref-btn"
               onClick={() => setSelectedFilter("ALL")}
@@ -112,7 +112,7 @@ export default function CollectionCouture({
           </div>
 
           {/* Sticking Filter Chips */}
-          <div className="flex justify-between items-center px-6 py-4 bg-black/5 border-b border-white/5 gap-4">
+          <div className="flex justify-between items-center px-4 md:px-6 py-4 bg-black/5 border-b border-white/5 gap-4">
             <div className="flex gap-2 overflow-x-auto hide-scrollbar">
               {coutureFilters.map((flt) => (
                 <button

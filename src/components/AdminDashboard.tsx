@@ -298,7 +298,7 @@ export default function AdminDashboard({
           <div className="absolute top-[40%] left-[30%] w-[30rem] h-[30rem] bg-emerald-600/5 rounded-full blur-[100px] pointer-events-none z-0"></div>
 
           {/* 1. HEADER SECTION */}
-          <header className="px-6 py-5 border-b border-white/10 flex justify-between items-center bg-white/[0.02] backdrop-blur-md relative z-10 shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
+          <header className="px-4 md:px-6 py-3 md:py-5 border-b border-white/10 flex justify-between items-center bg-white/[0.02] backdrop-blur-md relative z-10 shadow-[0_4px_30px_rgba(0,0,0,0.1)]">
           <div className="flex items-center gap-3">
             <div className="px-2.5 py-1 bg-gradient-to-tr from-blue-600 to-fuchsia-600 rounded-md text-white text-xs font-bold uppercase tracking-widest">
               PRO
@@ -430,7 +430,7 @@ export default function AdminDashboard({
           </aside>
 
           {/* B. DYNAMIC WORKSPACE PANEL */}
-          <main className="flex-1 overflow-y-auto p-6 bg-[#02040a]/40">
+          <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-[#02040a]/40">
             
             {/* ======================================================== */}
             {/* =================== TAB 1: OVERVIEW ==================== */}

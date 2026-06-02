@@ -23,7 +23,7 @@ export default function BottomNav({
   if (currentCollection === "origins") return null;
 
   return (
-    <nav className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[240px] h-[56px] bg-[#02040a]/70 backdrop-blur-[16px] rounded-full shadow-[0_20px_50px_rgba(3,7,18,0.7)] border border-white/10 flex justify-between items-center px-6 z-30 transition-all duration-500">
+    <nav className="fixed bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 w-[200px] md:w-[240px] h-[48px] md:h-[56px] bg-[#02040a]/70 backdrop-blur-[16px] rounded-full shadow-[0_20px_50px_rgba(3,7,18,0.7)] border border-white/10 flex justify-between items-center px-4 md:px-6 z-30 transition-all duration-500">
       {/* Home / Universal Entry */}
       <button
         id="bottom-home-btn"

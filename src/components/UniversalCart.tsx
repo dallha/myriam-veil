@@ -173,7 +173,7 @@ export default function UniversalCart({
           /* ================ FORMULAIRE DE LIVRAISON =============== */
           /* ======================================================== */
           <div className="flex-1 flex flex-col h-full">
-            <header className="flex-shrink-0 border-b border-white/10 bg-[#02040a]/40 px-6 py-6 flex items-center gap-4">
+            <header className="flex-shrink-0 border-b border-white/10 bg-[#02040a]/40 px-4 md:px-6 py-4 md:py-6 flex items-center gap-4">
               <button 
                 onClick={() => setShowCheckoutForm(false)}
                 className="text-slate-400 hover:text-white transition-colors p-1 flex items-center justify-center cursor-pointer"
@@ -359,7 +359,7 @@ export default function UniversalCart({
           /* ======================================================== */
           <>
             {/* Drawer Header */}
-            <header className="flex-shrink-0 border-b border-white/10 bg-[#02040a]/40 px-6 py-6 flex justify-between items-start">
+            <header className="flex-shrink-0 border-b border-white/10 bg-[#02040a]/40 px-4 md:px-6 py-4 md:py-6 flex justify-between items-start">
               <div>
                 <h2 className="font-display font-bold text-2xl md:text-3xl tracking-tight uppercase leading-none text-white">
                   Le Panier

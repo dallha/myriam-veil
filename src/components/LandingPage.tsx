@@ -98,7 +98,7 @@ export default function LandingPage({
     <div className="w-full bg-[#FAF8F5] text-[#222222] overflow-x-hidden font-sans relative">
       
       {/* ===== 1. HERO ===== */}
-      <section className="relative h-screen flex flex-col justify-center items-start text-left px-[10%] overflow-hidden group/hero">
+      <section className="relative h-screen flex flex-col justify-center items-start text-left px-6 sm:px-[10%] overflow-hidden group/hero">
         <div
           className="absolute inset-0 z-0"
           style={{
@@ -156,7 +156,7 @@ export default function LandingPage({
       </section>
 
       {/* ===== 2. HISTOIRE ===== */}
-      <section id="landing-histoire" className="relative py-28 px-[10%] bg-[#222222] text-center text-white group/histoire">
+      <section id="landing-histoire" className="relative py-20 md:py-28 px-6 md:px-[10%] bg-[#222222] text-center text-white group/histoire">
         
         {/* Floating edit button for Histoire */}
         {isAdminMode && (
@@ -189,7 +189,7 @@ export default function LandingPage({
       </section>
 
       {/* ===== REASSURANCE & CONFIDENCE ===== */}
-      <section className="py-20 px-[10%] bg-white border-b border-[#F2F0ED] text-[#222222]">
+      <section className="py-20 px-6 md:px-[10%] bg-white border-b border-[#F2F0ED] text-[#222222]">
         <div className="max-w-6xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-12">
           {/* Left stats */}
           <div className="flex gap-10 shrink-0 w-full lg:w-auto justify-center lg:justify-start">
@@ -227,7 +227,7 @@ export default function LandingPage({
       </section>
 
       {/* ===== 3. VALEURS ===== */}
-      <section id="landing-valeurs" className="relative py-28 px-[10%] group/valeurs">
+      <section id="landing-valeurs" className="relative py-20 md:py-28 px-6 md:px-[10%] group/valeurs">
         
         {/* Floating edit button for Valeurs */}
         {isAdminMode && (
@@ -261,7 +261,7 @@ export default function LandingPage({
       </section>
 
       {/* ===== 4. TÉMOIGNAGES ===== */}
-      <section className="relative py-28 px-[10%] bg-[#F2F0ED] group/testimonials">
+      <section className="relative py-20 md:py-28 px-6 md:px-[10%] bg-[#F2F0ED] group/testimonials">
         
         {/* Floating edit button for Testimonials */}
         {isAdminMode && (
@@ -302,7 +302,7 @@ export default function LandingPage({
       </section>
 
       {/* ===== 5. NEWSLETTER ===== */}
-      <section className="py-24 px-[10%] bg-[#222222] text-center">
+      <section className="py-20 md:py-24 px-6 md:px-[10%] bg-[#222222] text-center">
         <h2 className="font-serif text-3xl md:text-4xl mb-4 text-white">Restez inspiré</h2>
         <p className="text-[#aaaaaa] mb-10 text-sm md:text-base">Recevez nos actualités, nouvelles collections et histoires en avant-première.</p>
         <form
@@ -332,7 +332,7 @@ export default function LandingPage({
       </section>
 
       {/* ===== 6. CTA FINAL ===== */}
-      <section className="py-28 px-[10%] text-center bg-white">
+      <section className="py-20 md:py-28 px-6 md:px-[10%] text-center bg-white">
         <h2 className="font-serif text-3xl md:text-4xl mb-6">Prêt à découvrir l'élégance ?</h2>
         <p className="text-[#555555] mb-10 max-w-lg mx-auto text-sm md:text-base font-light">
           Explorez nos collections pensées pour celles et ceux qui cherchent une élégance authentique et mesurée.
@@ -346,7 +346,7 @@ export default function LandingPage({
       </section>
 
       {/* ===== 7. FOOTER ===== */}
-      <footer className="bg-[#222222] text-white px-[10%] py-16 pb-8">
+      <footer className="bg-[#222222] text-white px-6 md:px-[10%] py-16 pb-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12">
           <div>
             <h3 className="font-serif text-2xl mb-5">{content.logoText || "MYRIAM VEIL"}</h3>

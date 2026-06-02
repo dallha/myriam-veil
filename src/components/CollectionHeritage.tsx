@@ -235,7 +235,7 @@ export default function CollectionHeritage({
       {stage === "catalog" && (
         <div className="animate-fade-in bg-[#f8f6f6]">
           {/* Page metadata bar */}
-          <div className="px-6 py-4 flex items-center justify-between border-b border-[#EAE6DF] bg-[#F5F2EB]/40">
+          <div className="px-4 md:px-6 py-4 flex items-center justify-between border-b border-[#EAE6DF] bg-[#F5F2EB]/40">
             <button
               onClick={() => setStage("home")}
               className="text-[#2C2825] text-xs font-bold uppercase tracking-widest flex items-center gap-1 hover:text-[#b84b14]"
@@ -251,7 +251,7 @@ export default function CollectionHeritage({
           </h2>
 
           {/* Sticky filter tab categories bar */}
-          <div className="sticky top-16 z-20 bg-[#F5F2EB]/95 border-b border-[#EAE6DF] py-3 flex justify-between items-center px-6 gap-4">
+          <div className="sticky top-16 z-20 bg-[#F5F2EB]/95 border-b border-[#EAE6DF] py-3 flex justify-between items-center px-4 md:px-6 gap-4">
             <div className="flex gap-4">
               {subCategoriesList.map((catStr) => (
                 <button
