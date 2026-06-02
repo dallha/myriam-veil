@@ -1138,38 +1138,10 @@ export default function AdminDashboard({
             {/* =================== TAB 5: FACTURES ==================== */}
             {/* ======================================================== */}
             {activeTab === "factures" && (
-              <div className="space-y-4 py-4">
-                <div>
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-white">Gestion des Factures</h3>
-                  <p className="text-[10px] text-slate-400">Générez et imprimez les factures pour toutes les commandes traitées.</p>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {orders.length === 0 ? (
-                    <div className="col-span-full p-8 border border-white/10 rounded-xl text-center">
-                      <p className="text-xs text-slate-500 uppercase">Aucune facture disponible.</p>
-                    </div>
-                  ) : (
-                    orders.map(order => (
-                      <div key={order.id} className="p-5 border border-white/10 bg-white/[0.01] rounded-xl flex flex-col justify-between gap-4">
-                        <div>
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="text-xs font-bold font-mono text-emerald-400">FACTURE {order.id}</span>
-                            <span className="text-[10px] text-slate-500">{order.date}</span>
-                          </div>
-                          <p className="text-sm font-semibold text-white">{order.customerName}</p>
-                          <p className="text-xs text-slate-400 font-mono mt-1">{order.total.toLocaleString('fr-FR')} FCFA</p>
-                        </div>
-                        <button
-                          onClick={() => setPrintingOrder(order)}
-                          className="flex items-center justify-center gap-2 py-2.5 bg-emerald-600/10 hover:bg-emerald-600/20 text-emerald-400 border border-emerald-500/20 rounded text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
-                        >
-                          <FileText className="w-4 h-4" /> Voir Facture
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
+              <InvoicesTabContent
+                orders={orders}
+                onPrintOrder={(order) => setPrintingOrder(order)}
+              />
             )}
 
             {/* ======================================================== */}
@@ -2155,6 +2127,333 @@ function UsersTabContent() {
           <span>
             Les rôles sont stockés dans la table <code className="text-cyan-400 font-mono">admin_roles</code> de Supabase.
             Les utilisateurs doivent se déconnecter et se reconnecter pour que leur nouveau rôle soit pris en compte dans le JWT.
+          </span>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ================================================================
+// INVOICES TAB COMPONENT — Gestion des factures améliorée
+// ================================================================
+interface InvoicesTabContentProps {
+  orders: Order[];
+  onPrintOrder: (order: Order) => void;
+}
+
+function InvoicesTabContent({ orders, onPrintOrder }: InvoicesTabContentProps) {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [paymentFilter, setPaymentFilter] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<"date" | "total" | "name">("date");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [selectedInvoiceIds, setSelectedInvoiceIds] = useState<string[]>([]);
+
+  // Statistiques
+  const totalInvoiced = orders.reduce((sum, o) => sum + o.total, 0);
+  const paidOrders = orders.filter(o => o.paymentStatus === "Payé");
+  const unpaidOrders = orders.filter(o => o.paymentStatus !== "Payé");
+  const totalPaid = paidOrders.reduce((sum, o) => sum + o.total, 0);
+  const totalUnpaid = unpaidOrders.reduce((sum, o) => sum + o.total, 0);
+
+  // Filtrage
+  const filteredOrders = orders.filter(o => {
+    const matchesSearch = o.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      o.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      o.customerPhone.includes(searchQuery);
+    const matchesStatus = statusFilter === "all" || o.status === statusFilter;
+    const matchesPayment = paymentFilter === "all" ||
+      (paymentFilter === "paid" && o.paymentStatus === "Payé") ||
+      (paymentFilter === "unpaid" && o.paymentStatus !== "Payé") ||
+      (paymentFilter === "pending" && (!o.paymentStatus || o.paymentStatus === "À la livraison"));
+    return matchesSearch && matchesStatus && matchesPayment;
+  });
+
+  // Tri
+  const sortedOrders = [...filteredOrders].sort((a, b) => {
+    let cmp = 0;
+    if (sortBy === "date") cmp = new Date(a.date).getTime() - new Date(b.date).getTime();
+    else if (sortBy === "total") cmp = a.total - b.total;
+    else if (sortBy === "name") cmp = a.customerName.localeCompare(b.customerName);
+    return sortDir === "desc" ? -cmp : cmp;
+  });
+
+  const toggleSort = (field: typeof sortBy) => {
+    if (sortBy === field) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortBy(field); setSortDir("desc"); }
+  };
+
+  const handleExportCSV = () => {
+    if (sortedOrders.length === 0) return;
+    const header = "ID Facture,Client,Téléphone,Montant,Statut,Date,Paiement,StatutRèglement\n";
+    const rows = sortedOrders.map(o =>
+      `${o.id},"${o.customerName}","${o.customerPhone}",${o.total},"${o.status}","${o.date}","${o.paymentMethod === 'online' ? 'En ligne' : 'À la livraison'}","${o.paymentStatus || 'Non payé'}"`
+    ).join("\n");
+    const blob = new Blob(["\uFEFF" + header + rows], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `factures_myriam_veil_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleExportSelectedCSV = () => {
+    const selected = orders.filter(o => selectedInvoiceIds.includes(o.id));
+    if (selected.length === 0) return;
+    const header = "ID Facture,Client,Téléphone,Montant,Statut,Date,Paiement,StatutRèglement\n";
+    const rows = selected.map(o =>
+      `${o.id},"${o.customerName}","${o.customerPhone}",${o.total},"${o.status}","${o.date}","${o.paymentMethod === 'online' ? 'En ligne' : 'À la livraison'}","${o.paymentStatus || 'Non payé'}"`
+    ).join("\n");
+    const blob = new Blob(["\uFEFF" + header + rows], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `factures_selection_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const paymentBadge = (order: Order) => {
+    if (order.paymentStatus === "Payé") {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
+          <CheckCircle className="w-3 h-3" /> Payé
+        </span>
+      );
+    }
+    if (order.paymentMethod === "online") {
+      return (
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-amber-500/10 border border-amber-500/20 text-amber-400">
+          <Clock className="w-3 h-3" /> En attente
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-blue-500/10 border border-blue-500/20 text-blue-400">
+        <Truck className="w-3 h-3" /> À la livraison
+      </span>
+    );
+  };
+
+  const statusBadge = (status: string) => {
+    const styles: Record<string, string> = {
+      "Nouvelle": "bg-red-500/10 border-red-500/30 text-red-400",
+      "En préparation": "bg-amber-500/10 border-amber-500/30 text-amber-400",
+      "Expédiée": "bg-blue-500/10 border-blue-500/30 text-blue-400",
+      "Livrée": "bg-emerald-500/10 border-emerald-500/30 text-emerald-400",
+    };
+    return (
+      <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider border ${styles[status] || "bg-slate-500/10 border-slate-500/30 text-slate-400"}`}>
+        {status}
+      </span>
+    );
+  };
+
+  return (
+    <div className="space-y-6 max-w-6xl mx-auto py-4 font-sans text-slate-300">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-emerald-500/10 border border-emerald-500/30 rounded-full flex items-center justify-center text-emerald-400">
+            <FileText className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Gestion des Factures</h3>
+            <p className="text-[9px] text-slate-500 uppercase tracking-widest font-mono mt-0.5">
+              {orders.length} facture{orders.length > 1 ? "s" : ""} · {totalInvoiced.toLocaleString('fr-FR')} FCFA facturés
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {selectedInvoiceIds.length > 0 && (
+            <button
+              onClick={handleExportSelectedCSV}
+              className="flex items-center gap-1.5 px-3 py-2 border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 rounded-lg text-[10px] font-bold uppercase tracking-wider hover:bg-emerald-500/20 transition-colors cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5" /> Export {selectedInvoiceIds.length} sélect.
+            </button>
+          )}
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-1.5 px-3 py-2 border border-white/10 hover:border-white/20 text-slate-300 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer"
+          >
+            <Download className="w-3.5 h-3.5" /> Tout exporter CSV
+          </button>
+        </div>
+      </div>
+
+      {/* Statistiques */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="p-4 border border-white/10 rounded-xl bg-white/[0.01]">
+          <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Total Facturé</span>
+          <p className="text-lg font-bold text-white font-mono mt-1">{totalInvoiced.toLocaleString('fr-FR')} FCFA</p>
+        </div>
+        <div className="p-4 border border-white/10 rounded-xl bg-white/[0.01]">
+          <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Payé</span>
+          <p className="text-lg font-bold text-emerald-400 font-mono mt-1">{totalPaid.toLocaleString('fr-FR')} FCFA</p>
+          <p className="text-[9px] text-slate-500 mt-0.5">{paidOrders.length} facture{paidOrders.length > 1 ? "s" : ""}</p>
+        </div>
+        <div className="p-4 border border-white/10 rounded-xl bg-white/[0.01]">
+          <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Impayé / En attente</span>
+          <p className="text-lg font-bold text-amber-400 font-mono mt-1">{totalUnpaid.toLocaleString('fr-FR')} FCFA</p>
+          <p className="text-[9px] text-slate-500 mt-0.5">{unpaidOrders.length} facture{unpaidOrders.length > 1 ? "s" : ""}</p>
+        </div>
+        <div className="p-4 border border-white/10 rounded-xl bg-white/[0.01]">
+          <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Panier Moyen</span>
+          <p className="text-lg font-bold text-white font-mono mt-1">
+            {orders.length > 0 ? Math.round(totalInvoiced / orders.length).toLocaleString('fr-FR') : "0"} FCFA
+          </p>
+        </div>
+      </div>
+
+      {/* Filtres */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 min-w-[200px] max-w-xs">
+          <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+          <input
+            type="text"
+            placeholder="Rechercher par ID, client ou téléphone..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-8 pr-3 py-2 rounded-lg border border-white/10 bg-white/5 text-xs text-white focus:border-emerald-500 focus:outline-none placeholder:text-slate-500"
+          />
+        </div>
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value)}
+          className="text-[10px] font-bold uppercase tracking-wider px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-slate-300 focus:outline-none cursor-pointer"
+        >
+          <option value="all" className="bg-[#02040a]">Tous les statuts</option>
+          <option value="Nouvelle" className="bg-[#02040a]">Nouvelle</option>
+          <option value="En préparation" className="bg-[#02040a]">En préparation</option>
+          <option value="Expédiée" className="bg-[#02040a]">Expédiée</option>
+          <option value="Livrée" className="bg-[#02040a]">Livrée</option>
+        </select>
+        <select
+          value={paymentFilter}
+          onChange={(e) => setPaymentFilter(e.target.value)}
+          className="text-[10px] font-bold uppercase tracking-wider px-3 py-2 rounded-lg bg-white/5 border border-white/10 text-slate-300 focus:outline-none cursor-pointer"
+        >
+          <option value="all" className="bg-[#02040a]">Tous les paiements</option>
+          <option value="paid" className="bg-[#02040a]">Payé</option>
+          <option value="unpaid" className="bg-[#02040a]">Impayé</option>
+          <option value="pending" className="bg-[#02040a]">À la livraison</option>
+        </select>
+        <span className="text-[10px] text-slate-500 font-mono">
+          {sortedOrders.length} résultat{sortedOrders.length > 1 ? "s" : ""}
+        </span>
+      </div>
+
+      {/* Tableau des factures */}
+      {sortedOrders.length === 0 ? (
+        <div className="p-12 border border-dashed border-white/10 rounded-2xl text-center flex flex-col items-center justify-center bg-white/[0.005]">
+          <FileText className="w-10 h-10 mb-4 text-slate-600 stroke-[1.2]" />
+          <p className="text-sm font-bold uppercase tracking-wider text-white">Aucune facture trouvée</p>
+          <p className="text-xs text-slate-500 mt-1">Aucune commande ne correspond aux filtres actuels.</p>
+        </div>
+      ) : (
+        <div className="border border-white/10 rounded-xl overflow-hidden bg-white/[0.01]">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-white/[0.01] border-b border-white/5 text-[9px] uppercase tracking-widest text-slate-500 font-bold">
+                  <th className="px-4 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      checked={selectedInvoiceIds.length === sortedOrders.length && sortedOrders.length > 0}
+                      onChange={(e) => {
+                        if (e.target.checked) setSelectedInvoiceIds(sortedOrders.map(o => o.id));
+                        else setSelectedInvoiceIds([]);
+                      }}
+                      className="w-4 h-4 rounded border-white/10 cursor-pointer accent-emerald-500"
+                    />
+                  </th>
+                  <th className="px-4 py-3 cursor-pointer hover:text-white transition-colors" onClick={() => toggleSort("date")}>
+                    <span className="flex items-center gap-1">
+                      Date {sortBy === "date" && (sortDir === "desc" ? "↓" : "↑")}
+                    </span>
+                  </th>
+                  <th className="px-4 py-3 cursor-pointer hover:text-white transition-colors" onClick={() => toggleSort("name")}>
+                    <span className="flex items-center gap-1">
+                      Client {sortBy === "name" && (sortDir === "desc" ? "↓" : "↑")}
+                    </span>
+                  </th>
+                  <th className="px-4 py-3">Facture</th>
+                  <th className="px-4 py-3">Statut</th>
+                  <th className="px-4 py-3">Paiement</th>
+                  <th className="px-4 py-3 text-right cursor-pointer hover:text-white transition-colors" onClick={() => toggleSort("total")}>
+                    <span className="flex items-center justify-end gap-1">
+                      Montant {sortBy === "total" && (sortDir === "desc" ? "↓" : "↑")}
+                    </span>
+                  </th>
+                  <th className="px-4 py-3 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-white/5 text-xs font-light font-sans">
+                {sortedOrders.map((order, index) => (
+                  <motion.tr
+                    key={order.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.02, duration: 0.2 }}
+                    className={`hover:bg-white/[0.02] backdrop-blur-sm transition-all ${selectedInvoiceIds.includes(order.id) ? 'bg-emerald-500/[0.02]' : ''}`}
+                  >
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedInvoiceIds.includes(order.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) setSelectedInvoiceIds([...selectedInvoiceIds, order.id]);
+                          else setSelectedInvoiceIds(selectedInvoiceIds.filter(id => id !== order.id));
+                        }}
+                        className="w-4 h-4 rounded border-white/10 cursor-pointer accent-emerald-500"
+                      />
+                    </td>
+                    <td className="px-4 py-3 text-slate-400 font-mono text-[10px]">{order.date}</td>
+                    <td className="px-4 py-3">
+                      <div>
+                        <span className="font-semibold text-white">{order.customerName}</span>
+                        <p className="text-[9px] text-slate-500 font-mono">{order.customerPhone}</p>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className="text-[10px] font-bold font-mono text-emerald-400 uppercase">
+                        #{order.id.slice(0, 8)}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">{statusBadge(order.status)}</td>
+                    <td className="px-4 py-3">{paymentBadge(order)}</td>
+                    <td className="px-4 py-3 text-right font-mono font-bold text-white">
+                      {order.total.toLocaleString('fr-FR')} FCFA
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-center items-center gap-2">
+                        <button
+                          onClick={() => onPrintOrder(order)}
+                          className="px-2.5 py-1.5 border border-emerald-500/20 hover:bg-emerald-500/10 text-emerald-400 rounded transition-colors flex items-center gap-1 cursor-pointer font-bold uppercase text-[9px]"
+                          title="Voir la facture"
+                        >
+                          <FileText className="w-3 h-3" /> Facture
+                        </button>
+                      </div>
+                    </td>
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Info box */}
+      <div className="p-4 border border-white/5 bg-white/[0.005] rounded-xl text-[10px] text-slate-500 leading-relaxed">
+        <p className="flex items-center gap-1.5">
+          <FileText className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+          <span>
+            Cliquez sur <strong className="text-emerald-400">"Facture"</strong> pour générer et imprimer une facture détaillée.
+            Utilisez les filtres pour affiner la liste et le bouton <strong className="text-slate-400">"Exporter CSV"</strong> pour télécharger les données.
           </span>
         </p>
       </div>
