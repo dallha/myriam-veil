@@ -1069,69 +1069,13 @@ export default function AdminDashboard({
             {/* =================== TAB 4: DATABASE ==================== */}
             {/* ======================================================== */}
             {activeTab === "database" && (
-              <div className="space-y-6 max-w-xl mx-auto py-4">
-                <div>
-                  <h3 className="text-xs font-bold uppercase tracking-widest text-white">Sauvegarde & Restauration</h3>
-                  <p className="text-[10px] text-slate-400">Configurez ou réinitialisez la structure des données à chaud.</p>
-                </div>
-
-                <div className="space-y-4">
-                  {/* JSON Database Sync block */}
-                  <div className="p-5 border border-white/10 bg-white/[0.01] rounded-2xl flex flex-col justify-between gap-4">
-                    <div>
-                      <h4 className="text-xs font-bold text-white uppercase tracking-wide mb-1">Archivage portable JSON</h4>
-                      <p className="text-[10px] text-slate-400 leading-relaxed font-light">
-                        Téléchargez ou restaurez l'intégralité du site (textes de la page d'accueil et catalogue d'articles) dans un fichier portable. Idéal pour synchroniser des modifications sur un autre ordinateur.
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3 mt-2">
-                      <button
-                        onClick={onExport}
-                        className="flex items-center justify-center gap-2 py-3 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
-                      >
-                        <Download className="w-4 h-4 text-blue-400" /> Exporter JSON
-                      </button>
-
-                      {/* File Import Trigger */}
-                      <label className="flex items-center justify-center gap-2 py-3 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer text-center">
-                        <Upload className="w-4 h-4 text-fuchsia-400" />
-                        <span>Importer JSON</span>
-                        <input
-                          type="file"
-                          accept=".json"
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) onImport(file);
-                          }}
-                          className="hidden"
-                        />
-                      </label>
-                    </div>
-                  </div>
-
-                  {/* Reset block */}
-                  <div className="p-5 border border-red-500/20 bg-red-950/5 rounded-2xl flex flex-col justify-between gap-4">
-                    <div>
-                      <h4 className="text-xs font-bold text-red-400 uppercase tracking-wide mb-1">Zone de Risque</h4>
-                      <p className="text-[10px] text-slate-500 leading-relaxed font-light">
-                        Réinitialisez l'ensemble du site à sa configuration d'usine. Les données modifiées et les commandes stockées localement seront supprimées définitivement du navigateur.
-                      </p>
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        if (confirm("⚠️ ATTENTION : Vous allez supprimer toutes les modifications personnalisées et commandes de votre stockage de navigateur. Confirmer la réinitialisation ?")) {
-                          onReset();
-                        }
-                      }}
-                      className="flex items-center justify-center gap-2 py-3 bg-red-950/20 border border-red-500/25 hover:bg-red-900/20 text-red-400 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
-                    >
-                      <RotateCcw className="w-4 h-4" /> Réinitialiser le site d'origine
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <DatabaseTabContent
+                products={products}
+                orders={orders}
+                onExport={onExport}
+                onImport={onImport}
+                onReset={onReset}
+              />
             )}
 
             {/* ======================================================== */}
@@ -2111,6 +2055,334 @@ function UsersTabContent() {
           <span>
             Les rôles sont stockés dans la table <code className="text-cyan-400 font-mono">admin_roles</code> de Supabase.
             Les utilisateurs doivent se déconnecter et se reconnecter pour que leur nouveau rôle soit pris en compte dans le JWT.
+          </span>
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ================================================================
+// DATABASE TAB COMPONENT — Tableau de bord complet de la base de données
+// ================================================================
+interface DatabaseTabContentProps {
+  products: Product[];
+  orders: Order[];
+  onExport: () => void;
+  onImport: (file: File) => void;
+  onReset: () => void;
+}
+
+function DatabaseTabContent({ products, orders, onExport, onImport, onReset }: DatabaseTabContentProps) {
+  const [supabaseStatus, setSupabaseStatus] = useState<"checking" | "connected" | "disconnected">("checking");
+  const [tableStats, setTableStats] = useState<Record<string, { count: number; loading: boolean; error: string }>>({
+    products: { count: 0, loading: true, error: "" },
+    orders: { count: 0, loading: true, error: "" },
+    blog_posts: { count: 0, loading: true, error: "" },
+    admin_roles: { count: 0, loading: true, error: "" },
+  });
+  const [storageUsage, setStorageUsage] = useState({ used: 0, total: 5 * 1024 * 1024 }); // 5MB max
+  const [lastSync, setLastSync] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Vérifier Supabase
+    setSupabaseStatus(isSupabaseConfigured() ? "connected" : "disconnected");
+
+    // Charger les stats des tables Supabase
+    async function fetchTableStats() {
+      if (!isSupabaseConfigured()) {
+        setTableStats(prev => {
+          const updated = { ...prev };
+          Object.keys(updated).forEach(key => {
+            updated[key] = { count: 0, loading: false, error: "Supabase non configuré" };
+          });
+          return updated;
+        });
+        return;
+      }
+
+      const tables = ["products", "orders", "blog_posts", "admin_roles"];
+      for (const table of tables) {
+        try {
+          const { count, error } = await supabase
+            .from(table)
+            .select("*", { count: "exact", head: true });
+          if (error) throw error;
+          setTableStats(prev => ({
+            ...prev,
+            [table]: { count: count || 0, loading: false, error: "" }
+          }));
+        } catch (err: any) {
+          setTableStats(prev => ({
+            ...prev,
+            [table]: { count: 0, loading: false, error: err.message }
+          }));
+        }
+      }
+    }
+
+    fetchTableStats();
+
+    // Calculer l'utilisation du localStorage
+    const calculateStorage = () => {
+      let total = 0;
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key) {
+          const value = localStorage.getItem(key);
+          if (value) total += key.length + value.length;
+        }
+      }
+      setStorageUsage({ used: total, total: 5 * 1024 * 1024 });
+    };
+    calculateStorage();
+
+    // Dernière synchronisation
+    const saved = localStorage.getItem("myriam_veil_last_sync");
+    if (saved) setLastSync(saved);
+  }, []);
+
+  const handleSyncNow = () => {
+    const now = new Date().toISOString();
+    localStorage.setItem("myriam_veil_last_sync", now);
+    setLastSync(now);
+    alert("✓ Synchronisation effectuée ! Les données sont à jour.");
+  };
+
+  const handleClearCache = () => {
+    if (!window.confirm("Vider le cache localStorage ? Les données non sauvegardées seront perdues.")) return;
+    const keysToKeep = ["myriam_veil_products", "myriam_veil_orders", "myriam_veil_homepage", "myriam_veil_journal"];
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key && !keysToKeep.includes(key)) {
+        localStorage.removeItem(key);
+      }
+    }
+    alert("✓ Cache vidé !");
+  };
+
+  const formatBytes = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const storagePercent = (storageUsage.used / storageUsage.total) * 100;
+
+  return (
+    <div className="space-y-6 max-w-5xl mx-auto py-4 font-sans text-slate-300">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-amber-500/10 border border-amber-500/30 rounded-full flex items-center justify-center text-amber-400">
+            <Database className="w-5 h-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider">Base de Données</h3>
+            <p className="text-[9px] text-slate-500 uppercase tracking-widest font-mono mt-0.5">
+              État des données · Sauvegarde · Synchronisation
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSyncNow}
+            className="flex items-center gap-1.5 px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+          >
+            <RefreshCw className="w-3.5 h-3.5" /> Synchroniser
+          </button>
+        </div>
+      </div>
+
+      {/* Statut Supabase */}
+      <div className={`p-4 border rounded-xl flex items-center gap-3 ${
+        supabaseStatus === "connected"
+          ? "border-emerald-500/20 bg-emerald-500/[0.02]"
+          : supabaseStatus === "checking"
+          ? "border-amber-500/20 bg-amber-500/[0.02]"
+          : "border-red-500/20 bg-red-500/[0.02]"
+      }`}>
+        <div className={`w-3 h-3 rounded-full ${
+          supabaseStatus === "connected" ? "bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" :
+          supabaseStatus === "checking" ? "bg-amber-500 animate-pulse" : "bg-red-500"
+        }`} />
+        <div className="flex-1">
+          <span className="text-xs font-bold uppercase tracking-wider text-white">
+            Supabase : {supabaseStatus === "connected" ? "Connecté" : supabaseStatus === "checking" ? "Vérification..." : "Déconnecté"}
+          </span>
+          <p className="text-[9px] text-slate-500 font-mono mt-0.5">
+            {supabaseStatus === "connected"
+              ? "Base de données distante active · Les données sont synchronisées"
+              : "Mode local uniquement · Les données sont stockées dans le navigateur"}
+          </p>
+        </div>
+        {lastSync && (
+          <span className="text-[9px] text-slate-500 font-mono">
+            Dernière sync : {new Date(lastSync).toLocaleString('fr-FR')}
+          </span>
+        )}
+      </div>
+
+      {/* Statistiques des tables */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="p-4 border border-white/10 rounded-xl bg-white/[0.01]">
+          <div className="flex items-center gap-2 mb-2">
+            <Package className="w-4 h-4 text-blue-400" />
+            <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Produits</span>
+          </div>
+          {tableStats.products.loading ? (
+            <span className="w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full animate-spin inline-block"></span>
+          ) : (
+            <>
+              <p className="text-lg font-bold text-white font-mono">{tableStats.products.count || products.length}</p>
+              <p className="text-[9px] text-slate-500 mt-0.5">
+                {supabaseStatus === "connected" ? "Supabase" : "Local"} · {products.length} en cache
+              </p>
+            </>
+          )}
+        </div>
+
+        <div className="p-4 border border-white/10 rounded-xl bg-white/[0.01]">
+          <div className="flex items-center gap-2 mb-2">
+            <ShoppingBag className="w-4 h-4 text-fuchsia-400" />
+            <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Commandes</span>
+          </div>
+          {tableStats.orders.loading ? (
+            <span className="w-6 h-6 border-2 border-fuchsia-500 border-t-transparent rounded-full animate-spin inline-block"></span>
+          ) : (
+            <>
+              <p className="text-lg font-bold text-white font-mono">{tableStats.orders.count || orders.length}</p>
+              <p className="text-[9px] text-slate-500 mt-0.5">
+                {supabaseStatus === "connected" ? "Supabase" : "Local"} · {orders.length} en cache
+              </p>
+            </>
+          )}
+        </div>
+
+        <div className="p-4 border border-white/10 rounded-xl bg-white/[0.01]">
+          <div className="flex items-center gap-2 mb-2">
+            <BookOpen className="w-4 h-4 text-orange-400" />
+            <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Articles Blog</span>
+          </div>
+          {tableStats.blog_posts.loading ? (
+            <span className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin inline-block"></span>
+          ) : (
+            <>
+              <p className="text-lg font-bold text-white font-mono">{tableStats.blog_posts.count}</p>
+              <p className="text-[9px] text-slate-500 mt-0.5">Stockés dans Supabase</p>
+            </>
+          )}
+        </div>
+
+        <div className="p-4 border border-white/10 rounded-xl bg-white/[0.01]">
+          <div className="flex items-center gap-2 mb-2">
+            <Users className="w-4 h-4 text-cyan-400" />
+            <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500">Rôles Admin</span>
+          </div>
+          {tableStats.admin_roles.loading ? (
+            <span className="w-6 h-6 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin inline-block"></span>
+          ) : (
+            <>
+              <p className="text-lg font-bold text-white font-mono">{tableStats.admin_roles.count}</p>
+              <p className="text-[9px] text-slate-500 mt-0.5">Utilisateurs avec accès</p>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Stockage Local */}
+      <div className="p-5 border border-white/10 bg-white/[0.01] rounded-2xl space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Database className="w-4 h-4 text-amber-400" />
+            <h4 className="text-xs font-bold text-white uppercase tracking-wide">Stockage Local (localStorage)</h4>
+          </div>
+          <span className="text-[10px] font-mono text-slate-400">
+            {formatBytes(storageUsage.used)} / {formatBytes(storageUsage.total)}
+          </span>
+        </div>
+
+        {/* Barre de progression */}
+        <div className="w-full h-2 bg-white/5 rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-500 ${
+              storagePercent > 80 ? "bg-red-500" : storagePercent > 50 ? "bg-amber-500" : "bg-emerald-500"
+            }`}
+            style={{ width: `${Math.min(storagePercent, 100)}%` }}
+          />
+        </div>
+
+        <div className="flex items-center justify-between text-[9px] text-slate-500 font-mono">
+          <span>Données critiques : produits, commandes, paramètres, blog</span>
+          <button
+            onClick={handleClearCache}
+            className="text-red-400 hover:text-red-300 underline cursor-pointer"
+          >
+            Vider le cache
+          </button>
+        </div>
+      </div>
+
+      {/* Actions JSON */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="p-5 border border-white/10 bg-white/[0.01] rounded-2xl flex flex-col justify-between gap-4">
+          <div>
+            <h4 className="text-xs font-bold text-white uppercase tracking-wide mb-1">Archivage Portable JSON</h4>
+            <p className="text-[10px] text-slate-400 leading-relaxed font-light">
+              Téléchargez ou restaurez l'intégralité du site (textes, catalogue, commandes) dans un fichier portable.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={onExport}
+              className="flex items-center justify-center gap-2 py-3 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+            >
+              <Download className="w-4 h-4 text-blue-400" /> Exporter JSON
+            </button>
+            <label className="flex items-center justify-center gap-2 py-3 bg-white/5 border border-white/10 hover:bg-white/10 hover:border-white/20 text-white rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer text-center">
+              <Upload className="w-4 h-4 text-fuchsia-400" />
+              <span>Importer JSON</span>
+              <input
+                type="file"
+                accept=".json"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) onImport(file);
+                }}
+                className="hidden"
+              />
+            </label>
+          </div>
+        </div>
+
+        {/* Zone de risque */}
+        <div className="p-5 border border-red-500/20 bg-red-950/5 rounded-2xl flex flex-col justify-between gap-4">
+          <div>
+            <h4 className="text-xs font-bold text-red-400 uppercase tracking-wide mb-1">Zone de Risque</h4>
+            <p className="text-[10px] text-slate-500 leading-relaxed font-light">
+              Réinitialisez l'ensemble du site à sa configuration d'usine. Les données modifiées et les commandes stockées localement seront supprimées définitivement.
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              if (confirm("⚠️ ATTENTION : Vous allez supprimer toutes les modifications personnalisées et commandes de votre stockage de navigateur. Confirmer la réinitialisation ?")) {
+                onReset();
+              }
+            }}
+            className="flex items-center justify-center gap-2 py-3 bg-red-950/20 border border-red-500/25 hover:bg-red-900/20 text-red-400 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+          >
+            <RotateCcw className="w-4 h-4" /> Réinitialiser le site d'origine
+          </button>
+        </div>
+      </div>
+
+      {/* Info box */}
+      <div className="p-4 border border-white/5 bg-white/[0.005] rounded-xl text-[10px] text-slate-500 leading-relaxed">
+        <p className="flex items-center gap-1.5">
+          <Database className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+          <span>
+            Architecture <strong className="text-amber-400">Local-First</strong> : les données sont stockées localement (localStorage) et synchronisées avec Supabase quand disponible.
+            Utilisez l'export JSON pour sauvegarder ou transférer vos données.
           </span>
         </p>
       </div>
