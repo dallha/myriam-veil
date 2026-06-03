@@ -87,6 +87,19 @@ export default function App() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [paymentSuccessOrder, setPaymentSuccessOrder] = useState<Order | null>(null);
   const [isProductDetailOpen, setIsProductDetailOpen] = useState(false);
+  const [initialProductSlug, setInitialProductSlug] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (products.length > 0 && location.pathname.startsWith('/produit/')) {
+      const slug = location.pathname.replace('/produit/', '');
+      const prod = products.find(p => p.id === slug);
+      if (prod) {
+        setAppStage("collections");
+        setCurrentCollection(prod.collectionId);
+        setInitialProductSlug(slug);
+      }
+    }
+  }, [location.pathname, products, setAppStage, setCurrentCollection]);
 
   useEffect(() => {
     // Initial fetch from Supabase (or local storage fallback)
@@ -589,36 +602,39 @@ export default function App() {
                     <Suspense fallback={<CollectionFallback />}>
                       {currentCollection === "couture" && (
                         <CollectionCouture
-                          products={products.filter((p) => p.collectionId === "couture")}
+                          products={products.filter((p) => p.collectionId === "couture").sort((a, b) => (b.isMasterpiece ? 1 : 0) - (a.isMasterpiece ? 1 : 0))}
                           onAddToCart={handleAddToCart}
                           isAdminMode={isAdminMode}
                           onEditProduct={handleOpenEditProduct}
                           onDeleteProduct={handleDeleteProduct}
                           onAddProduct={handleOpenAddProduct}
                           onProductDetailToggle={(isOpen) => setIsProductDetailOpen(isOpen)}
+                          initialProductSlug={initialProductSlug}
                         />
                       )}
 
                       {currentCollection === "ecrin" && (
                         <CollectionEcrin
-                          products={products.filter((p) => p.collectionId === "ecrin")}
+                          products={products.filter((p) => p.collectionId === "ecrin").sort((a, b) => (b.isMasterpiece ? 1 : 0) - (a.isMasterpiece ? 1 : 0))}
                           onAddToCart={handleAddToCart}
                           isAdminMode={isAdminMode}
                           onEditProduct={handleOpenEditProduct}
                           onDeleteProduct={handleDeleteProduct}
                           onAddProduct={handleOpenAddProduct}
                           onProductDetailToggle={(isOpen) => setIsProductDetailOpen(isOpen)}
+                          initialProductSlug={initialProductSlug}
                         />
                       )}
 
                       {currentCollection === "heritage" && (
                         <CollectionHeritage
-                          products={products.filter((p) => p.collectionId === "heritage")}
+                          products={products.filter((p) => p.collectionId === "heritage").sort((a, b) => (b.isMasterpiece ? 1 : 0) - (a.isMasterpiece ? 1 : 0))}
                           onAddToCart={handleAddToCart}
                           isAdminMode={isAdminMode}
                           onEditProduct={handleOpenEditProduct}
                           onDeleteProduct={handleDeleteProduct}
                           onAddProduct={handleOpenAddProduct}
+                          initialProductSlug={initialProductSlug}
                         />
                       )}
                     </Suspense>
@@ -1206,9 +1222,22 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* LIGNE 5 : Description */}
+                    {/* LIGNE 5 : Description + Pièce Maîtresse */}
                     <div>
-                      <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Description</label>
+                      <div className="flex justify-between items-center mb-1.5">
+                        <label className="block text-[10px] font-bold uppercase tracking-widest text-slate-400">Description</label>
+                        <label className="flex items-center gap-2 cursor-pointer group">
+                          <input 
+                            type="checkbox" 
+                            checked={productForm.isMasterpiece || false}
+                            onChange={(e) => setProductForm({ ...productForm, isMasterpiece: e.target.checked })}
+                            className="w-3.5 h-3.5 rounded border-white/20 bg-white/5 accent-fuchsia-500 cursor-pointer"
+                          />
+                          <span className="text-[10px] font-bold uppercase tracking-widest text-fuchsia-400/80 group-hover:text-fuchsia-400 transition-colors">
+                            Pièce Maîtresse
+                          </span>
+                        </label>
+                      </div>
                       <textarea
                         rows={3}
                         value={productForm.description || ""}

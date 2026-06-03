@@ -22,6 +22,7 @@ export interface Product {
   related_product_ids?: string[];
   visible?: boolean;
   compareAtPrice?: number;
+  isMasterpiece?: boolean;
 }
 
 export interface CartItem {

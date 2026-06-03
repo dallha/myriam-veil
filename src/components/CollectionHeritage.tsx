@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { useState, MouseEvent } from "react";
+import { useState, MouseEvent, useEffect } from "react";
 import { Product } from "../types";
 import { ArrowLeft, Menu, ShoppingBag, Pencil, Trash2 } from "lucide-react";
 import SEO from "./SEO";
@@ -16,6 +16,7 @@ interface CollectionHeritageProps {
   onEditProduct: (product: Product) => void;
   onDeleteProduct: (productId: string) => void;
   onAddProduct: (collectionId: "heritage") => void;
+  initialProductSlug?: string;
 }
 
 export default function CollectionHeritage({ 
@@ -24,7 +25,8 @@ export default function CollectionHeritage({
   isAdminMode,
   onEditProduct,
   onDeleteProduct,
-  onAddProduct
+  onAddProduct,
+  initialProductSlug
 }: CollectionHeritageProps) {
   // Navigation stages: 'home' (Screen 2) | 'story' (Screen 11) | 'catalog' (Screen 10)
   const [stage, setStage] = useState<"home" | "story" | "catalog">("home");
@@ -36,6 +38,19 @@ export default function CollectionHeritage({
   const filteredProducts = products.filter((p) => {
     return p.category?.toUpperCase() === subCategory;
   });
+
+  useEffect(() => {
+    if (initialProductSlug) {
+      const p = products.find(x => x.id === initialProductSlug);
+      if (p && p.category) {
+        setStage("catalog");
+        setSubCategory(p.category.toUpperCase());
+        setTimeout(() => {
+          document.getElementById(p.id)?.scrollIntoView({ behavior: 'smooth' });
+        }, 300);
+      }
+    }
+  }, [initialProductSlug, products]);
 
   const [feedbackText, setFeedbackText] = useState<string | null>(null);
 
@@ -295,7 +310,7 @@ export default function CollectionHeritage({
                 </div>
               ) : (
                 filteredProducts.map((prod) => (
-                  <div key={prod.id} className="w-full bg-white shadow-sm border border-[#EAE6DF] rounded-sm group overflow-hidden">
+                  <div id={prod.id} key={prod.id} className="w-full bg-white shadow-sm border border-[#EAE6DF] rounded-sm group overflow-hidden">
                     {/* Item Image */}
                     <div className="w-full aspect-[4/5] overflow-hidden bg-[#EAE6DF] relative">
                       <img

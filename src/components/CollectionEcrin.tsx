@@ -17,6 +17,7 @@ interface CollectionEcrinProps {
   onDeleteProduct: (productId: string) => void;
   onAddProduct: (collectionId: "ecrin") => void;
   onProductDetailToggle?: (isOpen: boolean) => void;
+  initialProductSlug?: string;
 }
 
 export default function CollectionEcrin({ 
@@ -26,7 +27,8 @@ export default function CollectionEcrin({
   onEditProduct,
   onDeleteProduct,
   onAddProduct,
-  onProductDetailToggle
+  onProductDetailToggle,
+  initialProductSlug
 }: CollectionEcrinProps) {
   // Navigation: 'home' (Screen 3) | 'catalog' (Screen 8) | 'detail' (Screen 9)
   const [stage, setStage] = useState<"home" | "catalog" | "detail">("home");
@@ -40,6 +42,15 @@ export default function CollectionEcrin({
       if (onProductDetailToggle) onProductDetailToggle(false);
     };
   }, [stage, onProductDetailToggle]);
+
+  useEffect(() => {
+    if (initialProductSlug) {
+      const p = products.find(x => x.id === initialProductSlug);
+      if (p) {
+        handleProductSelect(p);
+      }
+    }
+  }, [initialProductSlug, products]);
 
   // Filter criteria for L'Écrin
   const [selectedCategory, setSelectedCategory] = useState<string>("Toutes les pièces");
@@ -347,7 +358,10 @@ export default function CollectionEcrin({
           {/* Header overrides */}
           <header className="absolute top-0 left-0 w-full z-20 flex justify-between items-center p-4">
             <button
-              onClick={() => setStage("catalog")}
+              onClick={() => {
+                setStage("catalog");
+                window.history.pushState(null, "", "/");
+              }}
               className="size-10 rounded-full bg-white/5 backdrop-blur-md border border-white/10 flex items-center justify-center text-white hover:bg-white/15 transition-all shadow-sm cursor-pointer"
               title="Retour aux bijoux"
             >

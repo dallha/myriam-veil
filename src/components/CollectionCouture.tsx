@@ -17,6 +17,7 @@ interface CollectionCoutureProps {
   onDeleteProduct: (productId: string) => void;
   onAddProduct: (collectionId: "couture") => void;
   onProductDetailToggle?: (isOpen: boolean) => void;
+  initialProductSlug?: string;
 }
 
 export default function CollectionCouture({ 
@@ -26,7 +27,8 @@ export default function CollectionCouture({
   onEditProduct,
   onDeleteProduct,
   onAddProduct,
-  onProductDetailToggle
+  onProductDetailToggle,
+  initialProductSlug
 }: CollectionCoutureProps) {
   // Navigation states: 'grid' or 'detail'
   const [viewState, setViewState] = useState<"grid" | "detail">("grid");
@@ -40,6 +42,15 @@ export default function CollectionCouture({
       if (onProductDetailToggle) onProductDetailToggle(false);
     };
   }, [viewState, onProductDetailToggle]);
+
+  useEffect(() => {
+    if (initialProductSlug) {
+      const p = products.find(x => x.id === initialProductSlug);
+      if (p) {
+        handleProductClick(p);
+      }
+    }
+  }, [initialProductSlug, products]);
 
   // Detail View Configs
   const [activeImageIndex, setActiveImageIndex] = useState(0);
@@ -236,7 +247,10 @@ export default function CollectionCouture({
             {/* Minimal Sub-header */}
             <div className="flex items-center justify-between p-4 bg-transparent border-b border-white/5">
               <button
-                onClick={() => setViewState("grid")}
+                onClick={() => {
+                  setViewState("grid");
+                  window.history.pushState(null, "", "/");
+                }}
                 className="size-8 flex items-center justify-center rounded-full bg-white/5 border border-white/10 hover:bg-white/10 transition-colors"
                 title="Retour au catalogue"
               >

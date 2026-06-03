@@ -401,8 +401,9 @@ export default function LandingPage({
             </div>
           </div>
         </div>
-        <div className="text-center border-t border-[#333333] pt-8 text-[#555555] text-xs">
-          &copy; {new Date().getFullYear()} MYRIAM VEIL. Tous droits réservés.
+        <div className="text-center border-t border-[#333333] pt-8 text-[#555555] text-xs flex flex-col items-center gap-2">
+          <span>&copy; {new Date().getFullYear()} Graphiste de la Hadara. Tous droits réservés.</span>
+          <span className="opacity-50 text-[10px] tracking-widest font-light">Identité visuelle par El Hadji Abdoulaye Niass (Graphiste de la Hadara)</span>
         </div>
       </footer>
 

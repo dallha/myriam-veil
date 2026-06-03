@@ -1678,7 +1678,10 @@ export default function AdminDashboard({
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span>
             <span>Console locale active</span>
           </div>
-          <span>Maison Myriam Veil · Dakar, Sénégal</span>
+          <div className="flex flex-col items-end gap-1">
+            <span>&copy; {new Date().getFullYear()} Graphiste de la Hadara. Tous droits réservés.</span>
+            <span className="text-[8px] opacity-50 tracking-widest">Identité visuelle par El Hadji Abdoulaye Niass (Graphiste de la Hadara)</span>
+          </div>
         </footer>
       </div>
       </motion.div>
